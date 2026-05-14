@@ -35,19 +35,67 @@ def _world_bbox_center_and_radius(obj) -> tuple[Vector, float]:
     return center, radius
 
 
-def setup_front_camera(obj, distance_factor: float = 2.5) -> bpy.types.Object:
-    """Create + activate an orthographic camera looking at the mesh from +Z."""
-    center, radius = _world_bbox_center_and_radius(obj)
-    cam_data = bpy.data.cameras.new(name="rc_proj_cam")
+def _bbox_of_many(objs) -> tuple[Vector, Vector]:
+    xs: list[float] = []; ys: list[float] = []; zs: list[float] = []
+    for o in objs:
+        for c in o.bound_box:
+            v = o.matrix_world @ Vector(c)
+            xs.append(v.x); ys.append(v.y); zs.append(v.z)
+    if not xs:
+        return Vector((0, 0, 0)), Vector((0, 0, 0))
+    return Vector((min(xs), min(ys), min(zs))), Vector((max(xs), max(ys), max(zs)))
+
+
+def setup_front_camera(
+    objs,
+    distance_factor: float = 2.5,
+    name: str = "rc_proj_cam",
+    view_axis: str = "+Z",
+) -> bpy.types.Object:
+    """Create + activate an orthographic camera framing the mesh(es).
+
+    `view_axis` is the axis the camera looks DOWN from:
+      * '+Z' — camera at +Z, looks straight down (default; accessories
+        autoprep'd to Y-up-in-stud-space appear "face-up" from this angle)
+      * '-Y' — camera at -Y, looks toward +Y (Blender front view; used for
+        Z-up avatars whose faces are on the +Y side)
+      * '+Y' / '-Z' / '+X' / '-X' also supported
+
+    `objs` may be a single object or an iterable.
+    """
+    if isinstance(objs, bpy.types.Object):
+        objs = [objs]
+    objs = list(objs)
+    if not objs:
+        raise ValueError("setup_front_camera: empty objs")
+
+    axes = {
+        "+X": Vector(( 1.0,  0.0,  0.0)),
+        "-X": Vector((-1.0,  0.0,  0.0)),
+        "+Y": Vector(( 0.0,  1.0,  0.0)),
+        "-Y": Vector(( 0.0, -1.0,  0.0)),
+        "+Z": Vector(( 0.0,  0.0,  1.0)),
+        "-Z": Vector(( 0.0,  0.0, -1.0)),
+    }
+    if view_axis not in axes:
+        raise ValueError(f"view_axis must be one of {list(axes)}, got {view_axis!r}")
+    look_from = axes[view_axis]
+
+    bb_min, bb_max = _bbox_of_many(objs)
+    center = (bb_min + bb_max) * 0.5
+    extents = bb_max - bb_min
+    # Take the two axes perpendicular to look_from for the ortho frame size.
+    perp_extents = [extents[i] for i in range(3) if abs(look_from[i]) < 0.5]
+    ortho_scale = (max(perp_extents) if perp_extents else max(extents)) * 1.15 or 1.0
+    radius = max(extents) / 2 or 1.0
+
+    cam_data = bpy.data.cameras.new(name=name)
     cam_data.type = "ORTHO"
-    cam_data.ortho_scale = radius * 2.4  # a bit of margin
-    cam = bpy.data.objects.new("rc_proj_cam", cam_data)
+    cam_data.ortho_scale = ortho_scale
+    cam = bpy.data.objects.new(name, cam_data)
     bpy.context.scene.collection.objects.link(cam)
-    # Position the camera in front of the mesh (positive Z), looking toward origin.
-    cam.location = center + Vector((0.0, 0.0, radius * distance_factor))
-    # Camera looks along -Z by default; aim at mesh center.
+    cam.location = center + look_from * max(radius * distance_factor, 5.0)
     direction = (center - cam.location).normalized()
-    # Convert direction into a rotation by aligning -Z to direction.
     rot_quat = direction.to_track_quat("-Z", "Y")
     cam.rotation_euler = rot_quat.to_euler()
     bpy.context.scene.camera = cam
@@ -117,9 +165,20 @@ def project_and_bake(
     out_png: Path,
     resolution: int = 2048,
     bake_margin: int = 16,
+    shared_camera: bpy.types.Object | None = None,
+    cleanup_camera: bool = True,
 ) -> dict:
-    """Bake a SD-generated image onto the mesh's primary UV via camera projection."""
-    setup_front_camera(obj)
+    """Bake a SD-generated image onto the mesh's primary UV via camera projection.
+
+    Pass `shared_camera` to reuse one camera across multiple meshes (e.g. all
+    `_Geo` pieces of an avatar baked from the same front view). When omitted,
+    a fresh per-object camera is built and cleaned up at the end.
+    """
+    own_camera = shared_camera is None
+    if own_camera:
+        setup_front_camera(obj)
+    else:
+        bpy.context.scene.camera = shared_camera
     primary_uv = project_uv_from_camera(obj)
 
     # Load the SD source image.
@@ -205,12 +264,53 @@ def project_and_bake(
     obj.data.materials.clear()
     obj.data.materials.append(final_mat)
 
-    # Drop the projection camera and temp material so the export is clean.
-    cam = bpy.data.objects.get("rc_proj_cam")
-    if cam is not None:
-        bpy.data.objects.remove(cam, do_unlink=True)
+    # Drop the projection camera (if we built one) and temp material.
+    if cleanup_camera and own_camera:
+        cam = bpy.data.objects.get("rc_proj_cam")
+        if cam is not None:
+            bpy.data.objects.remove(cam, do_unlink=True)
     if temp_mat.name in bpy.data.materials:
         bpy.data.materials.remove(temp_mat)
 
     scene.render.engine = prev_engine
     return {"status": "ok", "out_png": str(out_png), "resolution": resolution}
+
+
+def bake_pieces_from_shared_camera(
+    pieces,
+    source_image_path: Path,
+    out_dir: Path,
+    resolution: int = 2048,
+    bake_margin: int = 16,
+    view_axis: str = "-Y",
+) -> dict:
+    """Run `project_and_bake` on every piece from a single shared camera.
+
+    Used by the auto-rig flow so all 15 `_Geo` pieces of an avatar receive
+    consistent texture projection from one front-view SD image. Each piece
+    gets its own `<bone>_basecolor.png` in `out_dir`.
+
+    Default `view_axis` is `-Y` (Blender's Front viewport), matching the way
+    the autorig template stands the character up Z-up with face toward +Y.
+    """
+    pieces = list(pieces)
+    if not pieces:
+        return {"status": "nothing_to_bake", "pieces": []}
+    cam = setup_front_camera(pieces, view_axis=view_axis)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    log: dict = {"camera_name": cam.name, "view_axis": view_axis, "pieces": {}}
+    for obj in pieces:
+        out_png = out_dir / f"{obj.name}_basecolor.png"
+        result = project_and_bake(
+            obj,
+            source_image_path=source_image_path,
+            out_png=out_png,
+            resolution=resolution,
+            bake_margin=bake_margin,
+            shared_camera=cam,
+            cleanup_camera=False,
+        )
+        log["pieces"][obj.name] = result
+    bpy.data.objects.remove(cam, do_unlink=True)
+    log["status"] = "ok"
+    return log

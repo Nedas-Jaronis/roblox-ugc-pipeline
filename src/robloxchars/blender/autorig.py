@@ -532,6 +532,10 @@ def run_inplace(
     target_height: float = 5.0,
     decimate: bool = True,
     out_fbx: str | None = None,
+    texture_prompt: str | None = None,
+    texture_source_image: str | None = None,
+    texture_dir: str | None = None,
+    texture_resolution: int = 2048,
 ) -> AutoRigResult:
     """Run the full auto-rig on the named mesh (or the only mesh in scene)."""
     if mesh_name is None:
@@ -556,7 +560,57 @@ def run_inplace(
     log["attachments_stamped"] = stamp_body_attachments(armature)
     if decimate:
         log["decimate"] = decimate_per_group(pieces)
+
+    if texture_prompt or texture_source_image:
+        from . import project_paint
+        if texture_source_image:
+            src_img = Path(texture_source_image)
+        else:
+            # Host-side import — pulls in gradio_client; only runs when Blender's
+            # bundled Python has it available. The recommended flow is to
+            # generate the SD image on the host first, then pass via
+            # texture_source_image.
+            from ..texture_gen import generate_via_flux, prompt_for_accessory
+            full_prompt = prompt_for_accessory(texture_prompt, category="avatar")
+            log["texture_prompt"] = full_prompt
+            tex_dir = Path(texture_dir) if texture_dir else Path("runs/autorig/textures")
+            src_img_dst = tex_dir / "sd_source.png"
+            src_img = generate_via_flux(full_prompt, src_img_dst, width=1024, height=1024)
+            log["sd_source"] = str(src_img)
+        out_dir = Path(texture_dir) if texture_dir else Path("runs/autorig/textures")
+        log["texture_bake"] = project_paint.bake_pieces_from_shared_camera(
+            list(pieces.values()),
+            src_img,
+            out_dir,
+            resolution=texture_resolution,
+            view_axis="-Y",
+        )
+        _attach_baked_textures_to_pieces(pieces, out_dir)
+
     if out_fbx:
         export_fbx(armature, Path(out_fbx))
         log["export"] = out_fbx
     return AutoRigResult(log=log, armature_name=armature.name, pieces={b: o.name for b, o in pieces.items()})
+
+
+def _attach_baked_textures_to_pieces(pieces: dict[str, bpy.types.Object], tex_dir: Path) -> None:
+    """For each piece, replace its materials with a clean Principled BSDF
+    sampling the baked PNG via the primary UV layer."""
+    for bone_name, piece in pieces.items():
+        png_path = tex_dir / f"{piece.name}_basecolor.png"
+        if not png_path.exists():
+            continue
+        image = bpy.data.images.load(str(png_path), check_existing=True)
+        mat = bpy.data.materials.new(name=f"{piece.name}_Mat")
+        mat.use_nodes = True
+        nt = mat.node_tree
+        for n in list(nt.nodes):
+            nt.nodes.remove(n)
+        out_n = nt.nodes.new("ShaderNodeOutputMaterial"); out_n.location = (300, 0)
+        bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled"); bsdf.location = (0, 0)
+        tex = nt.nodes.new("ShaderNodeTexImage");        tex.location = (-300, 0)
+        tex.image = image
+        nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+        nt.links.new(bsdf.outputs["BSDF"], out_n.inputs["Surface"])
+        piece.data.materials.clear()
+        piece.data.materials.append(mat)
