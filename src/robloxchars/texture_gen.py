@@ -76,6 +76,113 @@ def prompt_for_accessory(user_prompt: str, category: str | None = None) -> str:
     return ", ".join(bits)
 
 
+# Multi-view prompt suffixes for full-body avatar texturing. Each entry maps
+# a view name to a phrase added to the user's base prompt.
+_VIEW_SUFFIXES: dict[str, str] = {
+    "front": "front view, full body, T-pose, centered, white background, flat lighting",
+    "back":  "back view from behind, full body, T-pose, centered, white background, flat lighting",
+    "left":  "left side view, profile shot, full body, T-pose, centered, white background, flat lighting",
+    "right": "right side view, profile shot, full body, T-pose, centered, white background, flat lighting",
+}
+
+
+def crop_to_content(
+    in_png: Path,
+    out_png: Path | None = None,
+    bg_threshold: int = 240,
+    pad_ratio: float = 0.02,
+    target_aspect: float | None = None,
+) -> Path:
+    """Crop an SD image to its non-white character content, then optionally
+    pad to a target aspect ratio.
+
+    Used to remove the breathing-room margins FLUX leaves around generated
+    characters. Critical for camera projection: world-space Z coordinates
+    map to image V coordinates linearly, so any white margin produces a
+    systematic offset that pulls face content onto torso UVs.
+    """
+    from PIL import Image  # host-side only
+    import numpy as np
+
+    out_png = out_png or in_png
+    with Image.open(in_png) as im:
+        im = im.convert("RGBA")
+        arr = np.asarray(im)
+    h, w, _ = arr.shape
+    # "Content" = pixels with any channel below `bg_threshold` (i.e. not pure white).
+    mask = np.any(arr[:, :, :3] < bg_threshold, axis=-1)
+    if not mask.any():
+        return in_png  # nothing to crop
+    rows = np.where(mask.any(axis=1))[0]
+    cols = np.where(mask.any(axis=0))[0]
+    top, bottom = int(rows[0]), int(rows[-1]) + 1
+    left, right = int(cols[0]), int(cols[-1]) + 1
+
+    pad_v = int(pad_ratio * (bottom - top))
+    pad_h = int(pad_ratio * (right - left))
+    top    = max(0, top - pad_v)
+    bottom = min(h, bottom + pad_v)
+    left   = max(0, left - pad_h)
+    right  = min(w, right + pad_h)
+
+    cropped = arr[top:bottom, left:right]
+    out = Image.fromarray(cropped, mode="RGBA")
+
+    if target_aspect is not None and out.height > 0:
+        cur = out.width / out.height
+        if cur < target_aspect:
+            # Pad sides to widen.
+            target_w = int(out.height * target_aspect)
+            pad = (target_w - out.width) // 2
+            new = Image.new("RGBA", (target_w, out.height), (255, 255, 255, 255))
+            new.paste(out, (pad, 0))
+            out = new
+        elif cur > target_aspect:
+            # Pad top/bottom to make taller.
+            target_h = int(out.width / target_aspect)
+            pad = (target_h - out.height) // 2
+            new = Image.new("RGBA", (out.width, target_h), (255, 255, 255, 255))
+            new.paste(out, (0, pad))
+            out = new
+
+    out.save(out_png)
+    return out_png
+
+
+def generate_multi_view(
+    base_prompt: str,
+    out_dir: Path,
+    views: tuple[str, ...] = ("front", "back", "left", "right"),
+    width: int = 768,
+    height: int = 1024,
+    num_inference_steps: int = 4,
+) -> dict[str, Path]:
+    """Generate one SD image per view for a humanoid avatar.
+
+    Returns a dict mapping view name -> PNG path.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths: dict[str, Path] = {}
+    for view in views:
+        suffix = _VIEW_SUFFIXES.get(view)
+        if suffix is None:
+            raise ValueError(f"Unknown view {view!r}; must be one of {list(_VIEW_SUFFIXES)}")
+        prompt = f"{base_prompt}, {suffix}"
+        out_png = out_dir / f"sd_{view}.png"
+        generate_via_flux(prompt, out_png, width=width, height=height,
+                          num_inference_steps=num_inference_steps,
+                          # Re-seed each view so they're consistent style but
+                          # distinct angles.
+                          seed=hash(view) & 0x7FFFFFFF, randomize_seed=False)
+        # Auto-crop to character content. Without this, FLUX's natural
+        # whitespace margin around the character produces a systematic
+        # Z-misalignment in the camera projection (face content bleeds
+        # onto torso UVs).
+        crop_to_content(out_png)
+        paths[view] = out_png
+    return paths
+
+
 # Ordered Space candidates: (space_id, infer_args_builder).
 # Each builder takes (prompt, seed, randomize_seed, width, height, steps) and
 # returns the positional args list for that Space's primary endpoint.

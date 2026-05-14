@@ -386,6 +386,30 @@ def split_mesh_by_bone(
 
 # --- step 5: re-parent each piece to armature -----------------------------
 
+def unwrap_pieces(pieces: dict[str, bpy.types.Object]) -> None:
+    """Smart-UV-Project each piece so its UVs don't overlap.
+
+    The original joined mesh's UV map often has different body regions
+    overlapping in UV space (Sketchfab multi-piece models commonly suffer
+    from this). Each split piece inherits that overlapping layout, and
+    baking writes one body part's texture onto another's UV island.
+    Re-unwrapping fresh per-piece guarantees each piece occupies a unique
+    region of its own texture sheet.
+    """
+    for piece in pieces.values():
+        bpy.ops.object.select_all(action="DESELECT")
+        piece.select_set(True)
+        bpy.context.view_layer.objects.active = piece
+        # Drop existing UV layers to start clean.
+        while piece.data.uv_layers:
+            piece.data.uv_layers.remove(piece.data.uv_layers[0])
+        # Smart UV Project creates a fresh layer.
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.smart_project(angle_limit=66.0, island_margin=0.02)
+        bpy.ops.object.mode_set(mode="OBJECT")
+
+
 def reattach_pieces_to_armature(
     pieces: dict[str, bpy.types.Object],
     armature: bpy.types.Object,
@@ -536,6 +560,8 @@ def run_inplace(
     texture_source_image: str | None = None,
     texture_dir: str | None = None,
     texture_resolution: int = 2048,
+    multi_view: bool = False,
+    multi_view_sources: dict[str, str] | None = None,
 ) -> AutoRigResult:
     """Run the full auto-rig on the named mesh (or the only mesh in scene)."""
     if mesh_name is None:
@@ -561,30 +587,53 @@ def run_inplace(
     if decimate:
         log["decimate"] = decimate_per_group(pieces)
 
-    if texture_prompt or texture_source_image:
+    if texture_prompt or texture_source_image or multi_view_sources:
         from . import project_paint
-        if texture_source_image:
-            src_img = Path(texture_source_image)
-        else:
-            # Host-side import — pulls in gradio_client; only runs when Blender's
-            # bundled Python has it available. The recommended flow is to
-            # generate the SD image on the host first, then pass via
-            # texture_source_image.
-            from ..texture_gen import generate_via_flux, prompt_for_accessory
-            full_prompt = prompt_for_accessory(texture_prompt, category="avatar")
-            log["texture_prompt"] = full_prompt
-            tex_dir = Path(texture_dir) if texture_dir else Path("runs/autorig/textures")
-            src_img_dst = tex_dir / "sd_source.png"
-            src_img = generate_via_flux(full_prompt, src_img_dst, width=1024, height=1024)
-            log["sd_source"] = str(src_img)
         out_dir = Path(texture_dir) if texture_dir else Path("runs/autorig/textures")
-        log["texture_bake"] = project_paint.bake_pieces_from_shared_camera(
-            list(pieces.values()),
-            src_img,
-            out_dir,
-            resolution=texture_resolution,
-            view_axis="-Y",
-        )
+        out_dir.mkdir(parents=True, exist_ok=True)
+        # Fresh Smart-UV per piece so source-mesh UV overlaps don't bleed
+        # one part's color into another's texture sheet.
+        unwrap_pieces(pieces)
+        log["fresh_uv_unwrap"] = True
+
+        if multi_view_sources:
+            # Caller pre-generated per-view SD images.
+            sources = {v: Path(p) for v, p in multi_view_sources.items()}
+            log["multi_view_sources"] = {k: str(v) for k, v in sources.items()}
+            log["texture_bake"] = project_paint.bake_pieces_multi_view(
+                list(pieces.values()), sources, out_dir,
+                resolution=texture_resolution,
+            )
+        elif multi_view:
+            # Generate the 4 view images on host.
+            from ..texture_gen import generate_multi_view
+            if not texture_prompt:
+                raise ValueError("multi_view requires texture_prompt")
+            sources = generate_multi_view(texture_prompt, out_dir,
+                                          width=768, height=1024)
+            log["multi_view_sources"] = {k: str(v) for k, v in sources.items()}
+            log["texture_bake"] = project_paint.bake_pieces_multi_view(
+                list(pieces.values()), sources, out_dir,
+                resolution=texture_resolution,
+            )
+        else:
+            # Single-view path (legacy).
+            if texture_source_image:
+                src_img = Path(texture_source_image)
+            else:
+                from ..texture_gen import generate_via_flux, prompt_for_accessory
+                full_prompt = prompt_for_accessory(texture_prompt, category="avatar")
+                log["texture_prompt"] = full_prompt
+                src_img_dst = out_dir / "sd_source.png"
+                src_img = generate_via_flux(full_prompt, src_img_dst, width=1024, height=1024)
+                log["sd_source"] = str(src_img)
+            log["texture_bake"] = project_paint.bake_pieces_from_shared_camera(
+                list(pieces.values()),
+                src_img,
+                out_dir,
+                resolution=texture_resolution,
+                view_axis="-Y",
+            )
         _attach_baked_textures_to_pieces(pieces, out_dir)
 
     if out_fbx:

@@ -276,6 +276,258 @@ def project_and_bake(
     return {"status": "ok", "out_png": str(out_png), "resolution": resolution}
 
 
+def _bake_facing_weight(
+    obj,
+    camera: bpy.types.Object,
+    out_png: Path,
+    resolution: int = 1024,
+    bake_margin: int = 16,
+) -> None:
+    """Bake a grayscale facing weight (0..1) for the camera onto the primary UV.
+
+    Each surface point's value is max(0, dot(normal, -view_dir)). Surface points
+    facing the camera get value 1.0; those facing away get 0.0. Used as a
+    blending weight when combining multiple view projections.
+
+    Assumes ProjUV was already created on the object (or will create a fresh
+    primary UV via Smart UV Project if missing).
+    """
+    # Camera forward direction in world space.
+    cam_forward_world = camera.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))
+    cam_forward_world.normalize()
+
+    # Use primary UV (smart-unwrapped during the projection pass).
+    if not obj.data.uv_layers:
+        raise RuntimeError("primary UV missing — call project_uv_from_camera first")
+    primary_uv = obj.data.uv_layers[0].name if obj.data.uv_layers.active is None else obj.data.uv_layers.active.name
+
+    target_name = f"rc_facing_{obj.name}"
+    if target_name in bpy.data.images:
+        bpy.data.images.remove(bpy.data.images[target_name])
+    target = bpy.data.images.new(name=target_name, width=resolution, height=resolution, alpha=True)
+    target.colorspace_settings.name = "Non-Color"
+    target.generated_color = (0, 0, 0, 1)
+
+    mat = bpy.data.materials.new(name=f"{obj.name}_FacingMat")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    for n in list(nt.nodes): nt.nodes.remove(n)
+
+    out_n = nt.nodes.new("ShaderNodeOutputMaterial"); out_n.location = (400, 0)
+    emit = nt.nodes.new("ShaderNodeEmission");         emit.location = (200, 0)
+    geom = nt.nodes.new("ShaderNodeNewGeometry");      geom.location = (-400, 200)
+
+    # Constant: -camera_forward (the direction from surface toward camera).
+    neg_forward = nt.nodes.new("ShaderNodeCombineXYZ"); neg_forward.location = (-400, -100)
+    neg_forward.inputs[0].default_value = -cam_forward_world.x
+    neg_forward.inputs[1].default_value = -cam_forward_world.y
+    neg_forward.inputs[2].default_value = -cam_forward_world.z
+
+    dot = nt.nodes.new("ShaderNodeVectorMath"); dot.location = (-150, 0)
+    dot.operation = "DOT_PRODUCT"
+    nt.links.new(geom.outputs["Normal"], dot.inputs[0])
+    nt.links.new(neg_forward.outputs["Vector"], dot.inputs[1])
+
+    clamp = nt.nodes.new("ShaderNodeMath"); clamp.location = (50, 0)
+    clamp.operation = "MAXIMUM"; clamp.inputs[1].default_value = 0.0
+    nt.links.new(dot.outputs["Value"], clamp.inputs[0])
+
+    nt.links.new(clamp.outputs["Value"], emit.inputs["Color"])
+    nt.links.new(emit.outputs["Emission"], out_n.inputs["Surface"])
+
+    bake_target_node = nt.nodes.new("ShaderNodeTexImage"); bake_target_node.location = (200, -300)
+    bake_target_node.image = target
+    bake_target_uv = nt.nodes.new("ShaderNodeUVMap");      bake_target_uv.location = (0, -300)
+    bake_target_uv.uv_map = primary_uv
+    nt.links.new(bake_target_uv.outputs["UV"], bake_target_node.inputs["Vector"])
+    for n in nt.nodes: n.select = False
+    bake_target_node.select = True
+    nt.nodes.active = bake_target_node
+
+    # Stash existing materials, swap in the facing mat, bake, restore.
+    saved_materials = list(obj.data.materials)
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 4
+    scene.render.bake.margin = bake_margin
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.bake(type="EMIT", margin=bake_margin, use_clear=True)
+
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+    target.filepath_raw = str(out_png)
+    target.file_format = "PNG"
+    target.save()
+
+    # Restore.
+    obj.data.materials.clear()
+    for m in saved_materials:
+        obj.data.materials.append(m)
+    bpy.data.materials.remove(mat)
+
+
+def _load_image_pixels(path: Path):
+    """Load an image via Blender's API and return (H, W, 4) float32 array."""
+    import numpy as np
+    img = bpy.data.images.load(str(path), check_existing=False)
+    w, h = img.size
+    arr = np.array(img.pixels[:], dtype=np.float32).reshape((h, w, 4))
+    bpy.data.images.remove(img)
+    return arr
+
+
+def _save_image_pixels(arr, path: Path) -> None:
+    """Save a (H, W, 4) float32 array as a PNG via Blender's API."""
+    h, w, _ = arr.shape
+    name = f"rc_composite_{path.stem}"
+    if name in bpy.data.images:
+        bpy.data.images.remove(bpy.data.images[name])
+    img = bpy.data.images.new(name=name, width=w, height=h, alpha=True)
+    img.colorspace_settings.name = "sRGB"
+    img.pixels = arr.flatten().tolist()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    img.filepath_raw = str(path)
+    img.file_format = "PNG"
+    img.save()
+    bpy.data.images.remove(img)
+
+
+def _composite_views_with_facing(
+    view_color_paths: dict[str, Path],
+    view_facing_paths: dict[str, Path],
+    out_png: Path,
+) -> dict:
+    """Weighted average of N view colors using facing-weight masks.
+
+    For each pixel: out = sum(color_v * facing_v) / sum(facing_v). When the
+    sum of facing weights is zero (UV-gutter areas), output is transparent.
+    Uses Blender's bundled numpy + Image API — no external PIL needed.
+    """
+    import numpy as np
+
+    color_arrs: dict[str, "np.ndarray"] = {}
+    facing_arrs: dict[str, "np.ndarray"] = {}
+    shape = None
+    for v, p in view_color_paths.items():
+        arr = _load_image_pixels(p)  # (H, W, 4) float32, [0,1]
+        color_arrs[v] = arr
+        if shape is None:
+            shape = arr.shape
+    for v, p in view_facing_paths.items():
+        arr = _load_image_pixels(p)
+        facing_arrs[v] = arr[:, :, 0]  # use red channel (it's grayscale)
+
+    H, W, _ = shape
+    sum_color = np.zeros((H, W, 3), dtype=np.float32)
+    sum_alpha = np.zeros((H, W),    dtype=np.float32)
+    sum_facing = np.zeros((H, W),   dtype=np.float32)
+    for v in color_arrs:
+        c = color_arrs[v]
+        f = facing_arrs[v]
+        # Power weighting accentuates whichever view is most aligned.
+        w = f ** 1.5
+        sum_color += c[:, :, :3] * w[:, :, None]
+        sum_alpha = np.maximum(sum_alpha, c[:, :, 3] * (w > 0.01))
+        sum_facing += w
+
+    eps = 1e-6
+    out_rgb = np.where(sum_facing[:, :, None] > eps,
+                       sum_color / np.maximum(sum_facing[:, :, None], eps),
+                       0.0)
+    out_alpha = np.where(sum_facing > eps, sum_alpha, 0.0)
+    out = np.concatenate([out_rgb, out_alpha[:, :, None]], axis=-1)
+    _save_image_pixels(out, out_png)
+    return {"views": list(view_color_paths), "out_png": str(out_png),
+            "coverage_pct": float((sum_facing > eps).mean() * 100)}
+
+
+def bake_pieces_multi_view(
+    pieces,
+    view_sources: dict[str, Path],
+    out_dir: Path,
+    resolution: int = 1024,
+    bake_margin: int = 8,
+) -> dict:
+    """Bake N views per piece + facing weights, composite into final basecolor.
+
+    `view_sources` maps view name ('front'/'back'/'left'/'right') to the SD
+    image generated for that view. Returns a per-piece log of intermediate
+    paths + the final composited basecolor PNG.
+    """
+    pieces = list(pieces)
+    if not pieces:
+        return {"status": "nothing_to_bake"}
+
+    # View-axis assignments matching Blender Z-up world: front camera looks
+    # along +Y (camera at -Y), back along -Y, left looks along +X, right -X.
+    view_axes = {
+        "front": "-Y",
+        "back":  "+Y",
+        "left":  "-X",
+        "right": "+X",
+    }
+
+    # Build one camera per view.
+    cams: dict[str, bpy.types.Object] = {}
+    for v in view_sources:
+        if v not in view_axes:
+            raise ValueError(f"Unsupported view {v!r}; supported: {list(view_axes)}")
+        cam = setup_front_camera(pieces, view_axis=view_axes[v], name=f"rc_proj_cam_{v}")
+        cams[v] = cam
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    per_view_dir = out_dir / "per_view"
+    per_view_dir.mkdir(parents=True, exist_ok=True)
+
+    log: dict = {"views": list(view_sources.keys()), "pieces": {}}
+
+    for piece in pieces:
+        piece_log: dict = {"per_view_color": {}, "per_view_facing": {}}
+        view_color_paths: dict[str, Path] = {}
+        view_facing_paths: dict[str, Path] = {}
+
+        for view_name, src_img in view_sources.items():
+            cam = cams[view_name]
+            color_out = per_view_dir / f"{piece.name}_{view_name}_color.png"
+            facing_out = per_view_dir / f"{piece.name}_{view_name}_facing.png"
+
+            project_and_bake(
+                piece,
+                source_image_path=src_img,
+                out_png=color_out,
+                resolution=resolution,
+                bake_margin=bake_margin,
+                shared_camera=cam,
+                cleanup_camera=False,
+            )
+            view_color_paths[view_name] = color_out
+
+            _bake_facing_weight(piece, cam, facing_out, resolution=resolution,
+                                 bake_margin=bake_margin)
+            view_facing_paths[view_name] = facing_out
+
+            piece_log["per_view_color"][view_name] = str(color_out)
+            piece_log["per_view_facing"][view_name] = str(facing_out)
+
+        # Composite this piece's views into one BaseColor.
+        final_out = out_dir / f"{piece.name}_basecolor.png"
+        piece_log["composite"] = _composite_views_with_facing(
+            view_color_paths, view_facing_paths, final_out,
+        )
+        piece_log["final"] = str(final_out)
+        log["pieces"][piece.name] = piece_log
+
+    # Cleanup cameras.
+    for cam in cams.values():
+        bpy.data.objects.remove(cam, do_unlink=True)
+    return log
+
+
 def bake_pieces_from_shared_camera(
     pieces,
     source_image_path: Path,
