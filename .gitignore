@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+*.egg-info/
+build/
+dist/
+
+# Generated assets
+output/
+runs/
+tmp/
+
+# Blender
+*.blend1
+*.blend2
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets
+.hf_token
+.env
