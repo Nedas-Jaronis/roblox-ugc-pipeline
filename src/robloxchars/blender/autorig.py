@@ -196,14 +196,28 @@ def _closest_point_on_segment(p: Vector, a: Vector, b: Vector) -> Vector:
 def assign_weights_by_proximity(
     mesh: bpy.types.Object,
     armature: bpy.types.Object,
+    top_k: int = 3,
+    falloff_power: float = 2.0,
 ) -> dict[str, int]:
-    """Assign each vertex weight=1.0 to the nearest bone segment (head→tail).
+    """Assign each vertex multi-bone falloff weights for smooth joint deformation.
 
-    Skipping HumanoidRootPart (it's a reference, no geometry). Returns a
-    histogram of vertex counts per bone for the run log.
+    For each vertex:
+      1. Compute distance to every bone segment (head->tail).
+      2. Take the `top_k` nearest bones (capped at Roblox's max of 4
+         influences per vertex).
+      3. Convert distances to weights via inverse-distance with `falloff_power`
+         exponent: w_i = 1 / (d_i + eps)^power, then normalize so weights
+         sum to 1.
+
+    This gives smooth blending at joints (e.g. a vertex near the elbow may end
+    up 0.6 LowerArm + 0.4 UpperArm). For splitting the mesh into per-bone
+    pieces later, the DOMINANT bone (highest weight) is used.
+
+    Returns a histogram of vertex counts per dominant bone.
     """
+    top_k = max(1, min(int(top_k), 4))  # Roblox caps influences/vertex at 4.
+
     bones = [b for b in armature.data.bones if b.name not in _NON_GEOMETRY_BONES]
-    # Bone segments in world space.
     arm_world = armature.matrix_world
     segments: list[tuple[str, Vector, Vector]] = []
     for b in bones:
@@ -211,27 +225,28 @@ def assign_weights_by_proximity(
         tail_w = arm_world @ b.tail_local
         segments.append((b.name, head_w, tail_w))
 
-    # Ensure a vertex group per bone (the Armature modifier will use these).
     for name, _, _ in segments:
         if name not in mesh.vertex_groups:
             mesh.vertex_groups.new(name=name)
 
     histogram: dict[str, int] = {name: 0 for name, _, _ in segments}
+    eps = 1e-4
     mesh_world = mesh.matrix_world
     for v_idx, v in enumerate(mesh.data.vertices):
         p = mesh_world @ v.co
-        best_name = segments[0][0]
-        best_d2 = float("inf")
+        per_bone_distance: list[tuple[str, float]] = []
         for name, h, t in segments:
             cp = _closest_point_on_segment(p, h, t)
-            d2 = (p - cp).length_squared
-            if d2 < best_d2:
-                best_d2 = d2
-                best_name = name
-        mesh.vertex_groups[best_name].add([v_idx], 1.0, "REPLACE")
-        histogram[best_name] += 1
+            per_bone_distance.append((name, (p - cp).length))
+        per_bone_distance.sort(key=lambda x: x[1])
+        top = per_bone_distance[:top_k]
+        raw_weights = [(name, 1.0 / (d + eps) ** falloff_power) for name, d in top]
+        total = sum(w for _, w in raw_weights) or 1.0
+        for name, w in raw_weights:
+            mesh.vertex_groups[name].add([v_idx], w / total, "REPLACE")
+        # Dominant = top entry by inverse distance (= shortest distance).
+        histogram[top[0][0]] += 1
 
-    # Attach an Armature modifier so the rig deforms the mesh.
     has_mod = any(m.type == "ARMATURE" for m in mesh.modifiers)
     if not has_mod:
         amod = mesh.modifiers.new(name="rc_armature", type="ARMATURE")
