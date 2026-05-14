@@ -446,6 +446,64 @@ def _composite_views_with_facing(
             "coverage_pct": float((sum_facing > eps).mean() * 100)}
 
 
+def render_views_for_img2img(
+    pieces,
+    out_dir: Path,
+    resolution: int = 768,
+    views: tuple[str, ...] = ("front", "back", "left", "right"),
+) -> dict[str, Path]:
+    """Render the meshes from each view to a PNG file (OpenGL solid shading).
+
+    These rendered views are used as `init_image` for SD img2img: SD will
+    stylize the mesh silhouette into a fully-textured character, which we
+    then project back. Much better silhouette alignment than free-form
+    text-to-image SD.
+    """
+    pieces = list(pieces)
+    if not pieces:
+        return {}
+    view_axes = {"front": "-Y", "back": "+Y", "left": "-X", "right": "+X"}
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Hide everything except the geo meshes so the render is clean.
+    hidden = []
+    for o in bpy.data.objects:
+        if o.type in ("ARMATURE", "EMPTY") and not o.hide_viewport:
+            o.hide_viewport = True
+            hidden.append(o)
+
+    scene = bpy.context.scene
+    prev_xres, prev_yres = scene.render.resolution_x, scene.render.resolution_y
+    scene.render.resolution_x = resolution
+    scene.render.resolution_y = int(resolution * 4 / 3)  # portrait
+
+    out_paths: dict[str, Path] = {}
+    for v in views:
+        cam = setup_front_camera(pieces, view_axis=view_axes[v], name=f"rc_render_cam_{v}")
+        scene.camera = cam
+        out_path = out_dir / f"render_{v}.png"
+        scene.render.filepath = str(out_path)
+        # Cycles OpenGL render via viewport.
+        for area in bpy.context.screen.areas:
+            if area.type == "VIEW_3D":
+                for region in area.regions:
+                    if region.type == "WINDOW":
+                        with bpy.context.temp_override(area=area, region=region):
+                            bpy.ops.view3d.view_camera()
+                            bpy.ops.render.opengl(write_still=True, view_context=False)
+                        break
+                break
+        out_paths[v] = out_path
+        bpy.data.objects.remove(cam, do_unlink=True)
+
+    scene.render.resolution_x = prev_xres
+    scene.render.resolution_y = prev_yres
+    # Restore visibility.
+    for o in hidden:
+        o.hide_viewport = False
+    return out_paths
+
+
 def bake_pieces_multi_view(
     pieces,
     view_sources: dict[str, Path],

@@ -158,6 +158,111 @@ def autoprep(
     console.print(f"[green]Auto-prepped:[/green] {out}")
 
 
+@app.command()
+def autorig(
+    source: Path = typer.Argument(..., exists=True, help="Humanoid mesh (.glb/.fbx/.obj/.blend)"),
+    out: Path = typer.Option(..., "--out", help="Output rigged FBX path"),
+    height: float = typer.Option(5.0, "--height", help="Target avatar height in studs"),
+    texture_prompt: Optional[str] = typer.Option(
+        None, "--texture-prompt",
+        help="Generate multi-view SD textures host-side from this prompt, then project + bake",
+    ),
+    texture_resolution: int = typer.Option(1024, "--texture-resolution"),
+    no_decimate: bool = typer.Option(False, "--no-decimate"),
+    join_prefix: Optional[str] = typer.Option(None, "--join-prefix"),
+):
+    """Auto-rig a humanoid mesh to R15 and optionally generate + bake textures."""
+    import json as _json
+    extra = [
+        "--in", str(source),
+        "--out", str(out),
+        "--height", str(height),
+        "--texture-resolution", str(texture_resolution),
+    ]
+    if no_decimate:
+        extra.append("--no-decimate")
+    if join_prefix:
+        extra += ["--join-prefix", join_prefix]
+
+    if texture_prompt:
+        # Generate multi-view SD images host-side (Blender's bundled Python
+        # doesn't have gradio_client). Then pass paths to Blender.
+        from . import texture_gen
+        tex_dir = out.parent / f"{out.stem}_textures"
+        tex_dir.mkdir(parents=True, exist_ok=True)
+        console.print(f"[cyan]Generating 4-view SD images for: {texture_prompt!r}[/cyan]")
+        sources = texture_gen.generate_multi_view(texture_prompt, tex_dir,
+                                                   width=768, height=1024)
+        sources_json = _json.dumps({k: str(v) for k, v in sources.items()})
+        extra += ["--multi-view-sources", sources_json,
+                  "--texture-dir", str(tex_dir)]
+        console.print(f"[green]SD views ready in:[/green] {tex_dir}")
+
+    _run_blender("autorig_runner.py", extra)
+    console.print(f"[green]Auto-rigged:[/green] {out}")
+
+
+@app.command()
+def upload(
+    asset: Path = typer.Argument(..., exists=True, help="FBX/GLB/PNG/etc to upload"),
+    user_id: Optional[str] = typer.Option(None, "--user-id", help="Roblox user ID (you must own the key with this user)"),
+    group_id: Optional[str] = typer.Option(None, "--group-id"),
+    asset_type: str = typer.Option("Model", "--asset-type", help="Model | Decal | Audio | Animation | Video"),
+    display_name: str = typer.Option("", "--name", help="Display name (defaults to filename)"),
+    description: str = typer.Option("", "--description"),
+):
+    """Upload an asset to Roblox via the Open Cloud Assets API.
+
+    Auth: set ROBLOX_API_KEY env var or put a token in `./.roblox_api_key`
+    (gitignored). The key must have asset:read + asset:write scopes for the
+    target user / group.
+    """
+    from . import uploader
+    if not user_id and not group_id:
+        console.print("[red]ERROR:[/red] specify --user-id or --group-id")
+        raise typer.Exit(2)
+    console.print(f"[cyan]Uploading {asset.name} as {asset_type}…[/cyan]")
+    result = uploader.upload_asset(
+        asset,
+        asset_type=asset_type,  # type: ignore[arg-type]
+        display_name=display_name,
+        description=description,
+        creator_user_id=user_id,
+        creator_group_id=group_id,
+    )
+    console.print(f"[green]Uploaded.[/green] asset_id={result.asset_id} op={result.operation_id}")
+
+
+@app.command(name="gen-and-rig")
+def gen_and_rig(
+    prompt: str = typer.Option(..., "--prompt",
+                                help="Text prompt for the character (drives BOTH cube3d and SD textures)"),
+    out: Path = typer.Option(..., "--out", help="Output rigged FBX path"),
+    height: float = typer.Option(5.0, "--height"),
+    texture_resolution: int = typer.Option(1024, "--texture-resolution"),
+):
+    """Full pipeline: cube3d humanoid -> multi-view SD textures -> autorig -> rigged FBX.
+
+    Single command from text prompt to validated marketplace-shape avatar.
+    """
+    from .providers.base import GenerationRequest
+    from . import generate as gen_mod
+    req = GenerationRequest(prompt=prompt, modality="text", target="avatar")
+    console.print(f"[cyan]1/3 Generating mesh via cube3d for: {prompt!r}[/cyan]")
+    gen_result = gen_mod.gen_cube3d(req, project_dir=ROOT)
+    console.print(f"[green]   mesh:[/green] {gen_result.asset_path}")
+
+    autorig(
+        source=gen_result.asset_path,
+        out=out,
+        height=height,
+        texture_prompt=prompt,
+        texture_resolution=texture_resolution,
+        no_decimate=False,
+        join_prefix=None,
+    )
+
+
 # ---- providers / plan -----------------------------------------------------
 
 @app.command(name="providers")

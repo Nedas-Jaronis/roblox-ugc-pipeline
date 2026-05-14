@@ -23,4 +23,5 @@ tmp/
 
 # Secrets
 .hf_token
+.roblox_api_key
 .env

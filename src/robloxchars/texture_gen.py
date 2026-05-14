@@ -149,6 +149,65 @@ def crop_to_content(
     return out_png
 
 
+def image_to_image_via_inference(
+    init_image_path: Path,
+    prompt: str,
+    out_png: Path,
+    model: str | None = None,
+    strength: float = 0.75,
+    num_inference_steps: int = 8,
+    guidance_scale: float = 7.5,
+) -> Path:
+    """Generate an SD image conditioned on an existing image (img2img).
+
+    Used for "mesh-aware" texture generation: render the mesh from a view,
+    pass the rendered image as `init_image`, ask SD to stylize it according
+    to `prompt`. The resulting output follows the mesh's silhouette tightly
+    so projection bake aligns cleanly with the actual geometry.
+
+    `strength` is the fraction of noise added to the init image (0 = identity,
+    1 = full random); 0.6-0.85 keeps the shape recognizable while letting the
+    prompt drive the look.
+    """
+    try:
+        from huggingface_hub import InferenceClient  # type: ignore
+    except ImportError as e:
+        raise RuntimeError("huggingface_hub not installed. pip install -e .[gen]") from e
+
+    tok = _hf_token()
+    if not tok:
+        raise RuntimeError("No HF token found. Put one in .hf_token or set HF_TOKEN.")
+    os.environ["HF_TOKEN"] = tok
+    os.environ["HUGGING_FACE_HUB_TOKEN"] = tok
+
+    chain = [model] if model else [
+        "stabilityai/stable-diffusion-xl-refiner-1.0",
+        "stabilityai/stable-diffusion-xl-base-1.0",
+        "runwayml/stable-diffusion-v1-5",
+    ]
+    client = InferenceClient(token=tok, timeout=120)
+    last_err: Exception | None = None
+    for model_id in chain:
+        try:
+            with open(init_image_path, "rb") as f:
+                init_bytes = f.read()
+            image = client.image_to_image(
+                init_bytes,
+                prompt=prompt,
+                model=model_id,
+                strength=strength,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+            )
+            out_png.parent.mkdir(parents=True, exist_ok=True)
+            image.save(out_png)
+            return out_png
+        except Exception as e:  # noqa: BLE001
+            last_err = f"{model_id}: {type(e).__name__}: {str(e)[:200]}"
+            continue
+    raise RuntimeError(f"All img2img models failed. Last: {last_err}")
+
+
 def generate_multi_view(
     base_prompt: str,
     out_dir: Path,
