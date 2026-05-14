@@ -114,12 +114,12 @@ def _extents(obj) -> Vector:
 
 # --- step 1: fit mesh to template ------------------------------------------
 
-def fit_mesh_to_template(mesh: bpy.types.Object, target_height: float = 5.0) -> dict:
+def fit_mesh_to_template(mesh: bpy.types.Object, target_height_studs: float = 5.0) -> dict:
     """Orient + uniform-scale + center the mesh to fit the R15 template.
 
-    Heuristic: the mesh's tallest world-axis becomes Z (Blender up). Then it
-    is uniformly scaled so the Z extent equals `target_height` and translated
-    so the bbox bottom touches Z = 0 and bbox center lies on the world axis.
+    `target_height_studs` is in Roblox studs (the R15 default character is
+    ~5.4 studs tall). Internally converted to meters at 0.28 m/stud, since
+    Blender's world coordinates are in meters.
     """
     log: dict = {}
 
@@ -131,27 +131,40 @@ def fit_mesh_to_template(mesh: bpy.types.Object, target_height: float = 5.0) -> 
         bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-    # Pick the world-axis with the largest extent as "up", rotate to Z.
+    # Decide orientation. For a humanoid in T-pose, the arms-span axis can be
+    # AS WIDE as the body height. So "tallest axis" alone isn't reliable;
+    # treat Z as already-up if it's within 85% of the largest extent.
     ex = _extents(mesh)
-    tallest = max(range(3), key=lambda i: ex[i])
+    largest = max(ex.x, ex.y, ex.z)
     import math
-    if tallest == 0:    # X tallest -> rotate -90 about Y so X becomes Z
-        bpy.ops.transform.rotate(value=-math.pi / 2, orient_axis="Y")
-        log["orient"] = "rotated -90° about Y (X was tallest)"
-    elif tallest == 1:  # Y tallest -> rotate +90 about X so Y becomes Z
-        bpy.ops.transform.rotate(value=math.pi / 2, orient_axis="X")
-        log["orient"] = "rotated +90° about X (Y was tallest)"
+    if ex.z >= 0.85 * largest:
+        log["orient"] = (
+            f"no rotation (Z already-up: ex={tuple(round(v,3) for v in ex)})"
+        )
     else:
-        log["orient"] = "no rotation (Z already tallest)"
+        # Z is clearly NOT the up axis — pick whichever of X/Y is taller.
+        if ex.x >= ex.y:
+            bpy.ops.transform.rotate(value=-math.pi / 2, orient_axis="Y")
+            log["orient"] = (
+                f"rotated -90° about Y (X was tallest; ex={tuple(round(v,3) for v in ex)})"
+            )
+        else:
+            bpy.ops.transform.rotate(value=math.pi / 2, orient_axis="X")
+            log["orient"] = (
+                f"rotated +90° about X (Y was tallest; ex={tuple(round(v,3) for v in ex)})"
+            )
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 
-    # Uniform scale so Z extent equals target_height.
+    # Uniform scale so Z extent equals target_height (converted to meters).
+    target_height_m = target_height_studs * 0.28  # 1 stud == 0.28 m
     ex = _extents(mesh)
     if ex.z > 1e-6:
-        s = target_height / ex.z
+        s = target_height_m / ex.z
         bpy.ops.transform.resize(value=(s, s, s))
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         log["scale_factor"] = round(s, 4)
+        log["target_height_studs"] = target_height_studs
+        log["target_height_m"] = round(target_height_m, 4)
 
     # Center bbox at X=Y=0, base at Z=0.
     bb_min, bb_max = _world_bbox(mesh)
@@ -230,41 +243,38 @@ def assign_weights_by_proximity(
 def fit_template_widths_to_mesh(
     armature: bpy.types.Object,
     mesh: bpy.types.Object,
-    shoulder_inset: float = 0.10,
+    shoulder_inset_ratio: float = 0.10,
     hip_width_ratio: float = 0.45,
 ) -> dict:
     """Move arm/leg bones inward so they actually lie inside the mesh silhouette.
 
-    The standard template has shoulders at ±1.0 and hips at ±0.5, sized for a
-    classic Roblox blocky body (~2 studs wide). Real-world humanoid meshes are
-    usually narrower (~1-1.4 studs at chest). If we leave the template alone,
-    proximity-based weighting puts all the arm/leg verts into the central
-    torso bones.
-
-    Strategy: measure the mesh's actual half-width at shoulder Z, then move
-    the arm bones to (mesh_half_width - shoulder_inset). For hips, use a
-    fraction of the same.
+    Strategy: measure the mesh's actual half-width in a slab around shoulder
+    height (78% up the mesh), then move the arm bones to
+    (mesh_half_width * (1 - shoulder_inset_ratio)). For hips, use a fraction
+    of the same. All math is unit-agnostic — works whether the mesh and
+    armature are in meters or studs.
     """
-    spec = _spec()  # not strictly needed here, but symmetric with other fns
-    proportions = r15_mod.proportions()
+    bb_min, bb_max = _world_bbox(mesh)
+    mesh_height = bb_max.z - bb_min.z
+    if mesh_height <= 1e-6:
+        return {"skipped": "mesh has zero height"}
+    # Shoulder height ~78% up the mesh; sample within an 8%-height band.
+    shoulder_z = bb_min.z + 0.78 * mesh_height
+    band = 0.08 * mesh_height
 
-    # Sample mesh vertices in a Z slab around shoulder height to estimate
-    # shoulder half-width. Use world-space.
     H = mesh.matrix_world
-    shoulder_z = proportions.shoulder_z
-    band = 0.4  # studs
     xs_at_shoulder = []
     for v in mesh.data.vertices:
         wp = H @ v.co
         if shoulder_z - band <= wp.z <= shoulder_z + band:
             xs_at_shoulder.append(wp.x)
     if not xs_at_shoulder:
-        return {"shoulder_x": None, "hip_x": None, "skipped": "no verts in shoulder band"}
+        return {"skipped": "no verts in shoulder band"}
     measured_half_width = max(abs(min(xs_at_shoulder)), abs(max(xs_at_shoulder)))
-    new_shoulder_x = max(0.2, measured_half_width - shoulder_inset)
-    new_hip_x = max(0.15, measured_half_width * hip_width_ratio)
+    new_shoulder_x = max(0.05 * mesh_height,
+                         measured_half_width * (1 - shoulder_inset_ratio))
+    new_hip_x = max(0.04 * mesh_height, measured_half_width * hip_width_ratio)
 
-    # Edit-mode tweak of bone X positions on both sides.
     bpy.ops.object.select_all(action="DESELECT")
     armature.select_set(True)
     bpy.context.view_layer.objects.active = armature
@@ -280,8 +290,10 @@ def fit_template_widths_to_mesh(
             eb.head.x = sign * new_hip_x
             eb.tail.x = sign * new_hip_x
     bpy.ops.object.mode_set(mode="OBJECT")
-    return {"shoulder_x": round(new_shoulder_x, 3), "hip_x": round(new_hip_x, 3),
-            "measured_half_width": round(measured_half_width, 3)}
+    return {"shoulder_x": round(new_shoulder_x, 4),
+            "hip_x": round(new_hip_x, 4),
+            "measured_half_width": round(measured_half_width, 4),
+            "mesh_height": round(mesh_height, 4)}
 
 
 def attach_armature(
@@ -575,8 +587,11 @@ def run_inplace(
         mesh = bpy.data.objects[mesh_name]
 
     log: dict = {}
-    log["fit"] = fit_mesh_to_template(mesh, target_height=target_height)
-    armature, weight_hist, width_fit = attach_armature(mesh, scale=target_height / 5.0)
+    log["fit"] = fit_mesh_to_template(mesh, target_height_studs=target_height)
+    # Armature template is in "Blender units = studs"; convert to meters so the
+    # armature bone positions match the mesh's meter-scaled rest pose.
+    armature_scale_m = (target_height / 5.0) * 0.28
+    armature, weight_hist, width_fit = attach_armature(mesh, scale=armature_scale_m)
     log["armature"] = armature.name
     log["template_width_fit"] = width_fit
     log["weights_per_bone"] = weight_hist

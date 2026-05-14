@@ -31,6 +31,12 @@ def _gradio_client():
     return Client
 
 
+def _hf_token() -> str | None:
+    """Shared resolver — env, project .hf_token file, or huggingface_hub cache."""
+    from .texture_gen import _hf_token as resolver
+    return resolver()
+
+
 def _bbox_for(req: GenerationRequest) -> tuple[float, float, float]:
     if req.target == "accessory" and req.accessory_category:
         spec = ACCESSORY_CATEGORIES.get(req.accessory_category)
@@ -71,8 +77,14 @@ def gen_cube3d(req: GenerationRequest, project_dir: Path) -> GenerationResult:
     run_dir = _new_run_dir(project_dir, "cube3d")
 
     space_id = os.environ.get("ROBLOXCHARS_CUBE3D_SPACE", "Roblox/cube3d-interactive")
-    hf_token = os.environ.get("HF_TOKEN")
-    client = Client(space_id, hf_token=hf_token) if hf_token else Client(space_id)
+    hf_token = _hf_token()
+    if hf_token:
+        os.environ["HF_TOKEN"] = hf_token
+        os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
+    try:
+        client = Client(space_id, hf_token=hf_token) if hf_token else Client(space_id)
+    except TypeError:
+        client = Client(space_id)
 
     # Endpoint shape pinned to the Roblox/cube3d-interactive app.py as of 2026-05.
     # Signature: handle_text_prompt(input_prompt, use_bbox, bbox_x, bbox_y, bbox_z, hi_res)
