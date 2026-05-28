@@ -39,14 +39,14 @@ Two execution modes intentionally separated:
 1. **Live mode (assistant + Blender MCP)** — assistant calls
    `mcp__blender__*` tools. Used for: importing generated meshes,
    in-Blender editing, exporting FBX, baking textures.
-2. **Headless CLI (`robloxchars`)** — pure-python validators + shell-out to
+2. **Headless CLI (`roblox-ugc`)** — pure-python validators + shell-out to
    `blender --background --python` for mesh ops. Used for batch validation,
-   CI checks, and the `robloxchars gen` HF-Space generation command.
+   CI checks, and the `roblox-ugc gen` HF-Space generation command.
 
 ## Repo layout
 
 ```
-src/robloxchars/
+src/roblox_ugc_pipeline/
   roblox_spec.py        # OFFICIAL spec values from creator-docs (R15 bones,
                         # *_Geo mesh names, group tri budgets, accessory bounds,
                         # attachments, 2048 texture cap, max 4 bone influences)
@@ -115,11 +115,11 @@ fixes" — only build remediation after seeing real validator output.
    - Image → instantmesh (default) or triposr (fast fallback)
 3. For accessories, pre-fill bbox from `ACCESSORY_CATEGORIES[<cat>].max_bounds`
    so the model is born within marketplace size limits.
-4. Run via `robloxchars gen --provider cube3d --prompt "..." --category Hat`
+4. Run via `roblox-ugc gen --provider cube3d --prompt "..." --category Hat`
    OR drive it manually through gradio_client snippets when the CLI doesn't fit.
 5. Import the asset into Blender via `mcp__blender__execute_blender_code` with
    `bpy.ops.wm.obj_import(filepath=...)` or `bpy.ops.import_scene.gltf(...)`.
-6. Run `robloxchars inspect <fbx>` then `robloxchars validate ... --target ...`.
+6. Run `roblox-ugc inspect <fbx>` then `roblox-ugc validate ... --target ...`.
 7. Surface findings; for each error, fix in Blender (MCP `execute_blender_code`).
 8. After fixes, re-run inspect+validate. Append to manifest.
 
@@ -141,7 +141,7 @@ fixes" — only build remediation after seeing real validator output.
 
 - No comments in code unless explaining a non-obvious WHY.
 - Validators import nothing from `bpy`.
-- `src/robloxchars/blender/` requires Blender and MUST NOT be imported by
+- `src/roblox_ugc_pipeline/blender/` requires Blender and MUST NOT be imported by
   the CLI directly; only invoked via subprocess.
 - Spec values in `roblox_spec.py` are sourced from the official creator-docs
   repo — when they drift, update there in one place.

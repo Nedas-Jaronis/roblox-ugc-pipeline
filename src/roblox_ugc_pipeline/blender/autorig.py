@@ -39,7 +39,7 @@ from . import r15_armature as r15_mod
 def _spec():
     """Lazy import so this module loads even outside the repo's src layout."""
     import importlib
-    return importlib.import_module("robloxchars.roblox_spec")
+    return importlib.import_module("roblox_ugc_pipeline.roblox_spec")
 
 
 # Map each R15 bone name to its `*_Geo` mesh name (the marketplace convention).

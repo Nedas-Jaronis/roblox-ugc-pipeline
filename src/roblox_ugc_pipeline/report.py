@@ -44,7 +44,7 @@ class ObjectReport(BaseModel):
 
 
 class MeshReport(BaseModel):
-    """Output of `robloxchars inspect <path>` — the canonical input to validators."""
+    """Output of `roblox-ugc inspect <path>` — the canonical input to validators."""
 
     source_path: str
     units: Literal["studs", "meters", "centimeters", "unknown"] = "unknown"

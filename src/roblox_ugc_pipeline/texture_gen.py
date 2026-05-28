@@ -2,7 +2,7 @@
 
 Calls a free HuggingFace Space (FLUX.1-schnell by default) and returns the
 generated PNG. The actual UV projection / bake happens in
-`robloxchars.blender.project_paint` (inside Blender).
+`roblox_ugc_pipeline.blender.project_paint` (inside Blender).
 
 Phase 1: single front-view image, accept some back-of-mesh stretching.
 Phase 2 (later): multi-view + blend.
@@ -279,7 +279,7 @@ def generate_via_flux(
     """Generate one image via HF Inference Providers (Spaces are flaky; this is the API).
 
     Tries the configured model chain in order; the first that succeeds wins.
-    Override the primary model via the ROBLOXCHARS_FLUX_MODEL env var.
+    Override the primary model via the ROBLOX_UGC_FLUX_MODEL env var.
     Falls back to the gradio_client / Spaces path if the Inference API itself
     is unavailable (older huggingface_hub).
     """
@@ -289,7 +289,7 @@ def generate_via_flux(
             "No HuggingFace token found. Put one in ./.hf_token or set HF_TOKEN."
         )
 
-    override = os.environ.get("ROBLOXCHARS_FLUX_MODEL")
+    override = os.environ.get("ROBLOX_UGC_FLUX_MODEL")
     chain: list[str] = [override] if override else []
     chain += [m for m in DEFAULT_INFERENCE_MODELS if m not in chain]
 
@@ -319,7 +319,7 @@ def generate_via_flux(
         return out_png
     raise RuntimeError(
         "All Inference models failed. Errors:\n  " + "\n  ".join(errors)
-        + "\n\nNote: model availability changes; override via ROBLOXCHARS_FLUX_MODEL."
+        + "\n\nNote: model availability changes; override via ROBLOX_UGC_FLUX_MODEL."
     )
 
 

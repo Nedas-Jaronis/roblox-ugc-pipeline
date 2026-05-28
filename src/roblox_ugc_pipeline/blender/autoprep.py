@@ -13,7 +13,7 @@ Pipeline:
 
 Importable from inside Blender (e.g. via `execute_blender_code`):
 
-    from robloxchars.blender import autoprep
+    from roblox_ugc_pipeline.blender import autoprep
     autoprep.run_inplace(category="Hat",
                          out_fbx="runs/.../prepped.fbx")
 
@@ -39,14 +39,14 @@ from mathutils import Vector  # type: ignore
 def _load_spec():
     import importlib
     try:
-        return importlib.import_module("robloxchars.roblox_spec")
+        return importlib.import_module("roblox_ugc_pipeline.roblox_spec")
     except ImportError:
         # Fallback: try to extend sys.path from this file's location.
         here = Path(__file__).resolve()
         for p in (here.parent.parent.parent, here.parent.parent):
-            if (p / "robloxchars").exists():
+            if (p / "roblox_ugc_pipeline").exists():
                 sys.path.insert(0, str(p))
-                return importlib.import_module("robloxchars.roblox_spec")
+                return importlib.import_module("roblox_ugc_pipeline.roblox_spec")
         raise
 
 

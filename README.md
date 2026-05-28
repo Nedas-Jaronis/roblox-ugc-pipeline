@@ -1,4 +1,4 @@
-# robloxchars
+# roblox-ugc-pipeline
 
 A **local-first, free-tier** pipeline for generating, validating, and preparing
 3D content for the **Roblox UGC marketplace** — full R15 avatar bundles,
@@ -84,7 +84,7 @@ pip install -e ".[gen]"
 
 ```bash
 export HF_TOKEN="hf_xxx"                                   # higher ZeroGPU quotas
-export ROBLOXCHARS_BLENDER="/path/to/blender"              # only if not on PATH
+export ROBLOX_UGC_BLENDER="/path/to/blender"              # only if not on PATH
 export ROBLOX_API_KEY="..."                                # only for `upload`
 ```
 
@@ -99,7 +99,7 @@ gitignored.
 ### Full pipeline: text → rigged avatar
 
 ```bash
-robloxchars gen-and-rig --prompt "cartoon farmer in overalls" --out runs/farmer.fbx
+roblox-ugc gen-and-rig --prompt "cartoon farmer in overalls" --out runs/farmer.fbx
 ```
 
 Generates the mesh with cube3d, produces 4-view SD textures, auto-rigs to R15,
@@ -109,45 +109,45 @@ bakes the texture, and writes a marketplace-shaped FBX.
 
 ```bash
 # Text → 3D (cube3d, primary)
-robloxchars gen --provider cube3d --prompt "stylized cowboy hat" --category Hat
+roblox-ugc gen --provider cube3d --prompt "stylized cowboy hat" --category Hat
 
 # Image → 3D (InstantMesh)
-robloxchars gen --provider instantmesh --image ref.png --category Hat
+roblox-ugc gen --provider instantmesh --image ref.png --category Hat
 ```
 
 ### Auto-rig an existing humanoid mesh
 
 ```bash
-robloxchars autorig character.glb --out rigged.fbx --height 5.0 \
+roblox-ugc autorig character.glb --out rigged.fbx --height 5.0 \
     --texture-prompt "red hoodie, blue jeans"
 ```
 
 ### Auto-prep an accessory (orient / scale / center / decimate / attachments)
 
 ```bash
-robloxchars autoprep raw_hat.glb --out hat.fbx --category Hat --bake
+roblox-ugc autoprep raw_hat.glb --out hat.fbx --category Hat --bake
 ```
 
 ### Validate
 
 ```bash
-robloxchars inspect rigged.fbx --out report.json
-robloxchars validate report.json --target avatar
-robloxchars validate report.json --target accessory --category Hat
+roblox-ugc inspect rigged.fbx --out report.json
+roblox-ugc validate report.json --target avatar
+roblox-ugc validate report.json --target accessory --category Hat
 ```
 
 ### Upload to Roblox
 
 ```bash
-robloxchars upload rigged.fbx --user-id <your-id> --asset-type Model --name "Farmer"
+roblox-ugc upload rigged.fbx --user-id <your-id> --asset-type Model --name "Farmer"
 ```
 
 ### Utility
 
 ```bash
-robloxchars providers          # list generation backends (free first)
-robloxchars plan --provider cube3d --prompt "..." --category Hat   # print the workflow
-robloxchars manifest list      # show generation history
+roblox-ugc providers          # list generation backends (free first)
+roblox-ugc plan --provider cube3d --prompt "..." --category Hat   # print the workflow
+roblox-ugc manifest list      # show generation history
 ```
 
 ### Interactive (Claude Code + BlenderMCP)
@@ -185,15 +185,15 @@ full table.
 
 Two intentionally separated execution modes:
 
-1. **Headless CLI (`robloxchars`)** — pure-Python validators + shell-out to
+1. **Headless CLI (`roblox-ugc`)** — pure-Python validators + shell-out to
    `blender --background --python` for mesh ops. Batch/CI friendly.
 2. **Live mode (assistant + BlenderMCP)** — interactive in-Blender editing.
 
 The validators never import `bpy`, so they run anywhere. Anything under
-`src/robloxchars/blender/` requires Blender and is only invoked via subprocess.
+`src/roblox_ugc_pipeline/blender/` requires Blender and is only invoked via subprocess.
 
 ```
-src/robloxchars/
+src/roblox_ugc_pipeline/
   roblox_spec.py        # official spec values (single source of truth)
   report.py             # MeshReport / ValidationResult / Finding models
   validators/           # pure-python: polycount, bounds, rig, attachments, materials

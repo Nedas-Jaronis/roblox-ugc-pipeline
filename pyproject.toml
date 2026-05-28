@@ -1,5 +1,5 @@
 [project]
-name = "robloxchars"
+name = "roblox-ugc-pipeline"
 version = "0.1.0"
 description = "Local pipeline for generating, validating, and preparing Roblox UGC characters and accessories"
 readme = "README.md"
@@ -22,7 +22,7 @@ gen = [
 ]
 
 [project.scripts]
-robloxchars = "robloxchars.cli:app"
+roblox-ugc = "roblox_ugc_pipeline.cli:app"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -32,4 +32,4 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"robloxchars.blender" = ["*.py"]
+"roblox_ugc_pipeline.blender" = ["*.py"]

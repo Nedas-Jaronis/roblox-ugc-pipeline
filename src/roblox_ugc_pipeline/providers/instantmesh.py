@@ -37,7 +37,7 @@ class InstantMeshProvider(Provider):
             "`bpy.ops.import_scene.gltf(filepath='...')` via "
             "`mcp__blender__execute_blender_code`.",
             "5. Apply Roblox axis fix if needed (rotate -90 X, or swap axes).",
-            "6. `robloxchars prep` to decimate to category cap + center + rescale.",
+            "6. `roblox-ugc prep` to decimate to category cap + center + rescale.",
             "7. Add Attachments per category, export FBX, validate.",
         ]
 

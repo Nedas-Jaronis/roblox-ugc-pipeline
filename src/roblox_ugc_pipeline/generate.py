@@ -76,7 +76,7 @@ def gen_cube3d(req: GenerationRequest, project_dir: Path) -> GenerationResult:
     bx, by, bz = _normalize_bbox_for_cube3d(bbox_studs)
     run_dir = _new_run_dir(project_dir, "cube3d")
 
-    space_id = os.environ.get("ROBLOXCHARS_CUBE3D_SPACE", "Roblox/cube3d-interactive")
+    space_id = os.environ.get("ROBLOX_UGC_CUBE3D_SPACE", "Roblox/cube3d-interactive")
     hf_token = _hf_token()
     if hf_token:
         os.environ["HF_TOKEN"] = hf_token
@@ -132,7 +132,7 @@ def gen_instantmesh(req: GenerationRequest, project_dir: Path) -> GenerationResu
         raise ValueError("InstantMesh needs at least one image.")
     Client = _gradio_client()
     run_dir = _new_run_dir(project_dir, "instantmesh")
-    space_id = os.environ.get("ROBLOXCHARS_INSTANTMESH_SPACE", "TencentARC/InstantMesh")
+    space_id = os.environ.get("ROBLOX_UGC_INSTANTMESH_SPACE", "TencentARC/InstantMesh")
     hf_token = os.environ.get("HF_TOKEN")
     client = Client(space_id, hf_token=hf_token) if hf_token else Client(space_id)
 
@@ -218,6 +218,6 @@ def generate(req: GenerationRequest, provider: str, project_dir: Path) -> Genera
         raise ValueError(
             f"No HTTP driver for provider '{provider}'. Available: {list(_DRIVERS)}. "
             "Other providers (sketchfab, hyper3d, hunyuan3d) run through "
-            "Blender MCP — use the assistant + `robloxchars plan` for their workflow."
+            "Blender MCP — use the assistant + `roblox-ugc plan` for their workflow."
         )
     return _DRIVERS[provider](req, project_dir)

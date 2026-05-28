@@ -1,4 +1,4 @@
-# Contributing to robloxchars
+# Contributing to roblox-ugc-pipeline
 
 Thanks for your interest! This is an open, free-tier project for generating and
 prepping Roblox UGC content. Issues and PRs are welcome.
@@ -12,7 +12,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[gen]"
 ```
 
-You'll also want **Blender 4.x** on your PATH (or set `ROBLOXCHARS_BLENDER`) for
+You'll also want **Blender 4.x** on your PATH (or set `ROBLOX_UGC_BLENDER`) for
 any of the mesh-operation commands. The pure-Python validators run without it.
 
 ## Project layout
@@ -20,12 +20,12 @@ any of the mesh-operation commands. The pure-Python validators run without it.
 See [README.md](./README.md#architecture) and [CLAUDE.md](./CLAUDE.md). The
 short version:
 
-- `src/robloxchars/validators/` — **pure Python, never import `bpy`.** Runs
+- `src/roblox_ugc_pipeline/validators/` — **pure Python, never import `bpy`.** Runs
   anywhere, easy to test.
-- `src/robloxchars/blender/` — **requires Blender**, only invoked via
+- `src/roblox_ugc_pipeline/blender/` — **requires Blender**, only invoked via
   subprocess (`blender --background --python ...`). Don't import these from the
   CLI directly.
-- `src/robloxchars/roblox_spec.py` — the single source of truth for Roblox spec
+- `src/roblox_ugc_pipeline/roblox_spec.py` — the single source of truth for Roblox spec
   numbers (tri budgets, bounds, bone names). If a value drifts, change it here.
 
 ## Conventions

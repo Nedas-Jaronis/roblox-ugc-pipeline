@@ -4,7 +4,7 @@ Two layers:
   * pure-python: validate, manifest, plan (no Blender required)
   * blender-shellout: inspect, prep, export (shells `blender --background`)
 
-Set ROBLOXCHARS_BLENDER to override the Blender executable path.
+Set ROBLOX_UGC_BLENDER to override the Blender executable path.
 """
 
 from __future__ import annotations
@@ -31,11 +31,11 @@ from . import generate as generate_mod
 app = typer.Typer(help="Roblox character / accessory generation + validation pipeline.")
 console = Console()
 
-ROOT = Path(os.environ.get("ROBLOXCHARS_PROJECT", os.getcwd()))
+ROOT = Path(os.environ.get("ROBLOX_UGC_PROJECT", os.getcwd()))
 
 
 def _blender_exe() -> str:
-    override = os.environ.get("ROBLOXCHARS_BLENDER")
+    override = os.environ.get("ROBLOX_UGC_BLENDER")
     if override:
         return override
     found = shutil.which("blender")
@@ -50,7 +50,7 @@ def _blender_exe() -> str:
         if Path(guess).exists():
             return guess
     raise typer.BadParameter(
-        "Could not find Blender. Set ROBLOXCHARS_BLENDER=<path to blender.exe>."
+        "Could not find Blender. Set ROBLOX_UGC_BLENDER=<path to blender.exe>."
     )
 
 

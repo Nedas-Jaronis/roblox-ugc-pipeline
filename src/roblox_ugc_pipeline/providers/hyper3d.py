@@ -33,7 +33,7 @@ class Hyper3DProvider(Provider):
             "3. Poll `mcp__blender__poll_rodin_job_status` until the job is done.",
             "4. Call `mcp__blender__import_generated_asset` to bring the mesh into the scene.",
             "5. Save the .blend, then export `model.fbx` into the run directory.",
-            "6. Append a manifest row via `robloxchars manifest add ...`.",
+            "6. Append a manifest row via `roblox-ugc manifest add ...`.",
         ]
         return steps
 

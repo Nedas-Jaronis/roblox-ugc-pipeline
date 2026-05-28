@@ -52,11 +52,11 @@ class Cube3DProvider(Provider):
             "`mcp__blender__execute_blender_code` running "
             "`bpy.ops.wm.obj_import(filepath=...)`.",
             f"4. The mesh should already fit the {req.target} bounding box, "
-            "but call `robloxchars inspect` to confirm.",
+            "but call `roblox-ugc inspect` to confirm.",
             "5. Add required Attachments (per accessory category) as empties "
             "in Blender, using the spec positions.",
             "6. Bake a 2048^2 BaseColor texture (cube3d v0.5 does NOT emit textures).",
-            "7. Export FBX, add manifest row, then `robloxchars validate`.",
+            "7. Export FBX, add manifest row, then `roblox-ugc validate`.",
         ]
         return steps
 

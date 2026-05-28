@@ -2,5 +2,5 @@
 
 Do NOT import this package outside of Blender — these modules depend on `bpy`.
 The pure-python entrypoint that shells out to Blender lives in
-`robloxchars.cli`.
+`roblox_ugc_pipeline.cli`.
 """

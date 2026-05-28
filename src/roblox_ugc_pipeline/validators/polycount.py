@@ -17,7 +17,7 @@ def check_avatar(report: MeshReport) -> list[Finding]:
             validator="polycount.avatar.total",
             severity="error",
             message=f"Total triangles {total} exceeds avatar budget {AVATAR_BUDGET.max_total_tris}",
-            remediation=f"Run `robloxchars prep --decimate {AVATAR_BUDGET.max_total_tris}` or decimate per-group in Blender",
+            remediation=f"Run `roblox-ugc prep --decimate {AVATAR_BUDGET.max_total_tris}` or decimate per-group in Blender",
         ))
 
     # Group-level enforcement — sum tris across the meshes in each body group.

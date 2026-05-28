@@ -104,7 +104,7 @@ def main() -> int:
 
     # Lazy import to avoid loading bpy-dependent modules until Blender is running.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-    from robloxchars.blender import autorig
+    from roblox_ugc_pipeline.blender import autorig
 
     mv_sources = None
     if args.multi_view_sources:
