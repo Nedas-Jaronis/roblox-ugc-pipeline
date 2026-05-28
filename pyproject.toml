@@ -2,6 +2,10 @@
 name = "robloxchars"
 version = "0.1.0"
 description = "Local pipeline for generating, validating, and preparing Roblox UGC characters and accessories"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Nedas Jaronis" }]
+keywords = ["roblox", "ugc", "3d", "cube3d", "blender", "text-to-3d", "avatar"]
 requires-python = ">=3.10"
 dependencies = [
     "typer>=0.12",

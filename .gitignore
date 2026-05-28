@@ -25,3 +25,6 @@ tmp/
 .hf_token
 .roblox_api_key
 .env
+
+# Claude Code local state
+.claude/

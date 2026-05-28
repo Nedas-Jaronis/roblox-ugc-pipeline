@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "WebFetch(domain:github.com)",
-      "mcp__blender__execute_blender_code",
-      "mcp__blender__download_sketchfab_model"
-    ]
-  }
-}
