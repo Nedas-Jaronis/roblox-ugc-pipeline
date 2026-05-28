@@ -6,8 +6,8 @@ prepping Roblox UGC content. Issues and PRs are welcome.
 ## Getting set up
 
 ```bash
-git clone https://github.com/Nedas-Jaronis/robloxCharacters.git
-cd robloxCharacters
+git clone https://github.com/Nedas-Jaronis/roblox-ugc-pipeline.git
+cd roblox-ugc-pipeline
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[gen]"
 ```
