@@ -1,0 +1,21 @@
+name: 🙋 I want to work on a task
+description: Claim an existing issue so we don't double up.
+labels: ["help wanted"]
+body:
+  - type: input
+    id: issue
+    attributes:
+      label: Which issue do you want to take?
+      placeholder: "#11 (export ready-to-use .rbxm Accessory)"
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: How do you plan to approach it? (optional)
+      description: A sentence or two is plenty. Helps avoid overlap.
+  - type: input
+    id: help
+    attributes:
+      label: Anything you need to get unblocked? (optional)
+      placeholder: e.g. a sample FBX, a test Roblox group, API access...

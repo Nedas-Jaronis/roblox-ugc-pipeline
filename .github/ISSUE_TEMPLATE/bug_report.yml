@@ -1,0 +1,49 @@
+name: 🐛 Bug report
+description: Something broke or produced a bad result.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Generation Spaces drift over time, so details help a lot.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what actually happened?
+      placeholder: I ran gen-and-rig and the texture came out blank...
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      render: bash
+      placeholder: roblox-ugc gen --provider cube3d --prompt "stylized cowboy hat" --category Hat
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output / error
+      description: Paste the complete terminal output (not just the last line).
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: Provider / Space (if a generation issue)
+      placeholder: cube3d / instantmesh / triposr / sketchfab
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: Windows 11 / Ubuntu 24.04 / macOS 14
+    validations:
+      required: true
+  - type: input
+    id: blender
+    attributes:
+      label: Blender version
+      placeholder: 4.2 (or "not used / pure-Python command")

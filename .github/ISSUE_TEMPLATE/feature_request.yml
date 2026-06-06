@@ -1,0 +1,33 @@
+name: ✨ Feature request
+description: Suggest a new capability or improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like to see?
+      placeholder: Generate procedural hats in Blender without an external model...
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter?
+      description: What does this unlock or make easier?
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Which part of the pipeline?
+      options:
+        - Generation (text/image → 3D)
+        - Rigging (R15)
+        - Texturing / baking
+        - Validation
+        - Previews / visualization
+        - Upload / Studio publishing
+        - CLI / orchestration
+        - Other
+    validations:
+      required: true

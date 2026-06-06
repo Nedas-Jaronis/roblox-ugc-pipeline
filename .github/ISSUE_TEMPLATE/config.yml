@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Contributing guide
+    url: https://github.com/Nedas-Jaronis/roblox-ugc-pipeline/blob/main/CONTRIBUTING.md
+    about: How to set up the project, the code layout, and how to submit changes.
+  - name: 🌱 Good first issues
+    url: https://github.com/Nedas-Jaronis/roblox-ugc-pipeline/issues?q=is%3Aopen+label%3A%22good+first+issue%22
+    about: New here? Start with one of these.
