@@ -201,7 +201,44 @@ def _finish(run_dir: Path, req: GenerationRequest, provider: str,
                             request=req, extra=extra)
 
 
-# ---- TRELLIS (image-to-3D, PRIMARY — best free quality + textures) --------
+# ---- SF3D / Stable Fast 3D (image-to-3D, PRIMARY — clean game-ready mesh) --
+
+def gen_sf3d(req: GenerationRequest, project_dir: Path) -> GenerationResult:
+    """Stability AI's Stable Fast 3D. A DIRECT mesh-reconstruction model (not
+    gaussian-splatting), so it emits one coherent UV-unwrapped textured mesh
+    instead of the fragmented splat-derived geometry (attached planes/wisps)
+    that TRELLIS produces. Exposes exactly the marketplace-prep controls we
+    want: remesh to clean triangle/quad topology, a vertex-count cap to land
+    near the Roblox tri budget, and a 2048 texture.
+
+    Endpoint: /run_button(input_image, foreground_ratio, remesh_option,
+    vertex_count, texture_size) -> (bg_removed_preview, model3d_glb)."""
+    if req.modality not in ("image", "multi") or not req.image_paths:
+        raise ValueError("SF3D is image-to-3D. Use cube3d for text.")
+    run_dir = _new_run_dir(project_dir, "sf3d")
+    space_id = os.environ.get("ROBLOX_UGC_SF3D_SPACE", "stabilityai/stable-fast-3d")
+    client = _client(space_id)
+
+    remesh = os.environ.get("ROBLOX_UGC_SF3D_REMESH", "Triangle")  # None|Triangle|Quad
+    vertex_count = int(os.environ.get("ROBLOX_UGC_SF3D_VERTS", "-1"))  # -1 = auto
+    img = _prepare_image(req.image_paths[0], run_dir)
+    out = client.predict(
+        _handle(img),   # input_image
+        0.85,           # foreground_ratio
+        remesh,         # remesh_option -> clean even topology
+        vertex_count,   # vertex_count cap (-1 = model decides)
+        2048,           # texture_size (Roblox cap)
+        api_name="/run_button",
+    )
+    result_path = _coerce_path(out, prefer_ext=(".glb", ".obj"))
+    if not result_path:
+        raise RuntimeError(f"SF3D Space '{space_id}' returned no mesh. out={out!r}")
+    return _finish(run_dir, req, "sf3d", result_path,
+                   {"space_id": space_id, "input_image": img,
+                    "remesh": remesh, "vertex_count": vertex_count})
+
+
+# ---- TRELLIS (image-to-3D — richest textures, but splat-derived; needs clean) --
 
 def gen_trellis(req: GenerationRequest, project_dir: Path) -> GenerationResult:
     if req.modality not in ("image", "multi") or not req.image_paths:
@@ -343,6 +380,7 @@ def _write_meta(run_dir: Path, req: GenerationRequest, provider: str, asset: Pat
 
 _DRIVERS = {
     "cube3d": gen_cube3d,
+    "sf3d": gen_sf3d,
     "trellis": gen_trellis,
     "hunyuan3d-space": gen_hunyuan3d_space,
     "instantmesh": gen_instantmesh,

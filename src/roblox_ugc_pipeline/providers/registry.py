@@ -5,6 +5,7 @@ from .cube3d import Cube3DProvider
 from .hunyuan3d import Hunyuan3DProvider, Hunyuan3DSpaceProvider
 from .hyper3d import Hyper3DProvider
 from .instantmesh import InstantMeshProvider, TripoSRProvider
+from .sf3d import SF3DProvider
 from .sketchfab import SketchfabProvider
 from .trellis import TrellisProvider
 
@@ -12,6 +13,7 @@ from .trellis import TrellisProvider
 _PROVIDERS: dict[str, Provider] = {
     # Free-tier first.
     "cube3d": Cube3DProvider(),
+    "sf3d": SF3DProvider(),
     "trellis": TrellisProvider(),
     "hunyuan3d-space": Hunyuan3DSpaceProvider(),
     "instantmesh": InstantMeshProvider(),
