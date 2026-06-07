@@ -82,6 +82,11 @@ def clean_mesh(
     plane_ratio: float = 0.06,   # min/max bbox extent below this AND large -> plane
     needle_ratio: float = 0.10,  # mid extent this small relative to max -> needle
     min_keep_frac: float = 0.015,  # drop dust smaller than this frac of the biggest part
+    min_area_frac: float = 0.0,  # opt-in: drop flecks below this frac of total area.
+                                 # OFF by default — on fragmented meshes (TRELLIS)
+                                 # tiny detail (teeth) is the same scale as flecks,
+                                 # so this eats real geometry. Use only when the
+                                 # model has no sub-fraction detail worth keeping.
     core_frac: float = 0.12,     # parts >= this frac of the biggest survivor define the body bbox
     bbox_margin: float = 0.06,   # keep parts within (body bbox + this frac of size)
     cluster_gap: float = 0.03,   # pieces within this frac of overall size are "connected"
@@ -99,14 +104,16 @@ def clean_mesh(
     tris_in = sum(len(p.faces) for p in parts)
     sizes = [float(p.extents.max()) for p in parts]
     biggest = max(sizes)
+    total_area = sum(float(p.area) for p in parts) or 1e-9
 
     # --- stage 1: shape-based removal (planes / needles / dust) ---
     survivors, planes, needles = [], 0, 0
     for p, longest in zip(parts, sizes):
         ext = sorted(float(e) for e in p.extents)  # [thin, mid, long]
         long = ext[2] or 1e-9
-        if longest < biggest * min_keep_frac:
-            continue  # dust speck
+        # dust: tiny by extent OR tiny by surface area (sub-fraction flecks)
+        if longest < biggest * min_keep_frac or float(p.area) < min_area_frac * total_area:
+            continue
         if ext[0] / long < plane_ratio and longest > biggest * 0.4:
             planes += 1
         elif ext[1] / long < needle_ratio:
