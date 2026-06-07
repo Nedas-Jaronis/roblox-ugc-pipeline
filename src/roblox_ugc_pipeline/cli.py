@@ -280,16 +280,23 @@ def providers_cmd():
 
 @app.command()
 def gen(
-    provider: str = typer.Option("cube3d", "--provider", help="cube3d | instantmesh"),
+    provider: str = typer.Option(
+        "cube3d", "--provider",
+        help="cube3d (text) | trellis | hunyuan3d-space | instantmesh (image)",
+    ),
     prompt: str = typer.Option("", "--prompt"),
-    image: list[Path] = typer.Option([], "--image", exists=True),
+    image: list[Path] = typer.Option([], "--image", exists=True,
+        help="Input image. Repeat for Hunyuan multi-view: front, back, left, right."),
     target: str = typer.Option("accessory", "--target"),
     category: Optional[str] = typer.Option(None, "--category"),
+    clean: bool = typer.Option(False, "--clean",
+        help="Strip single-view plane/needle artifacts from the result mesh."),
 ):
     """Generate a model via a free HF Space.
 
-    Currently supports cube3d (text) and instantmesh (image). The result is
-    saved under runs/<timestamp>-<provider>/ with a meta.json sidecar.
+    Text -> cube3d. Image -> trellis (best quality), hunyuan3d-space (multi-view:
+    pass up to 4 images front/back/left/right for full 360 geometry), or
+    instantmesh (lighter fallback). Saved under runs/<timestamp>-<provider>/.
     """
     modality = "image" if image else "text"
     req = GenerationRequest(
@@ -302,6 +309,34 @@ def gen(
     result = generate_mod.generate(req, provider=provider, project_dir=ROOT)
     console.print(f"[green]Generated:[/green] {result.asset_path}")
     console.print(f"[dim]Run dir:[/dim] {result.run_dir}")
+    if clean:
+        cleaned = result.asset_path.with_name(result.asset_path.stem + "_clean.glb")
+        _clean_impl(result.asset_path, cleaned)
+
+
+def _clean_impl(source: Path, out: Path) -> None:
+    from . import postprocess
+    rep = postprocess.clean_mesh(source, out)
+    console.print(
+        f"[green]Cleaned:[/green] {out}\n"
+        f"[dim]components {rep.components_in}->{rep.components_kept} "
+        f"(removed {rep.removed_planes} planes, {rep.removed_needles} needles); "
+        f"tris {rep.tris_in}->{rep.tris_out}[/dim]"
+    )
+
+
+@app.command()
+def clean(
+    source: Path = typer.Argument(..., exists=True, help="Mesh (.glb/.obj/.ply)"),
+    out: Path = typer.Option(..., "--out", help="Cleaned output mesh path"),
+):
+    """Strip plane/needle artifacts from a single-view 3D reconstruction.
+
+    Splits the mesh into connected components and drops the paper-thin planes
+    and trailing needles that image-to-3D models hallucinate for unseen
+    geometry, keeping the real body.
+    """
+    _clean_impl(source, out)
 
 
 @app.command()

@@ -51,8 +51,9 @@ with free models and no per-asset cost.
 
 | Area | What's built |
 |---|---|
-| **Text → 3D** | `cube3d` (Roblox's own foundation model) via HF Space, bbox-constrained to the accessory category so output is born marketplace-sized. |
-| **Image → 3D** | InstantMesh (default) and TripoSR (fast fallback) via HF Spaces, with Roblox axis fix. |
+| **Text → 3D** | `cube3d` (Roblox's own foundation model) via HF Space, bbox-constrained to the accessory category so output is born marketplace-sized. Full closed geometry. |
+| **Image → 3D** | **TRELLIS** (best free quality, textured GLB) primary; **Hunyuan3D-2** for multi-view (front/back/left/right → full 360°); InstantMesh/TripoSR fallbacks. Inputs are auto square-padded + upscaled. All free HF Spaces. |
+| **Mesh cleanup** | `clean` strips the paper-thin planes + needle artifacts single-view models hallucinate for unseen geometry (trimesh, bpy-free). |
 | **Asset remix** | Sketchfab CC0/CC-BY pull + in-Blender edit (via BlenderMCP). |
 | **Auto-rigging** | Arbitrary humanoid mesh → fitted to R15 proportions → heat-diffusion auto-weights → split into exact `<Bone>_Geo` meshes → `*_Att` attachments stamped at spec positions → per-group decimation to avatar tri budgets. |
 | **Texturing** | Text → multi-view Stable Diffusion images → camera-projected UVs → baked into a single shared 2048² BaseColor PNG. Also bakes vertex-color / Sketchfab meshes into a clean Principled-BSDF texture. |
@@ -111,8 +112,15 @@ bakes the texture, and writes a marketplace-shaped FBX.
 # Text → 3D (cube3d, primary)
 roblox-ugc gen --provider cube3d --prompt "stylized cowboy hat" --category Hat
 
-# Image → 3D (InstantMesh)
-roblox-ugc gen --provider instantmesh --image ref.png --category Hat
+# Image → 3D (TRELLIS — best free quality; --clean strips single-view artifacts)
+roblox-ugc gen --provider trellis --image ref.png --category Hat --clean
+
+# Image → 3D, multi-view for full 360° geometry (front, back, left, right)
+roblox-ugc gen --provider hunyuan3d-space \
+    --image front.png --image back.png --image left.png --image right.png
+
+# Clean an existing mesh (strip hallucinated planes/needles)
+roblox-ugc clean runs/<run>/model.glb --out clean.glb
 ```
 
 ### Auto-rig an existing humanoid mesh

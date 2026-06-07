@@ -12,25 +12,47 @@ Sloyd, and DashBlox, but local-first and free-tier-focused.
 
 Generation provider priority — try in this order:
 
-1. **`cube3d` (Roblox/cube3d-v0.5)** — **PRIMARY** for text-to-3D. Roblox's own
+1. **`cube3d` (Roblox/cube3d-v0.5)** — **PRIMARY for text-to-3D.** Roblox's own
    foundation model. Apache-style license. Free via HF Space (no GPU
    required) or self-hosted with a >=16GB VRAM CUDA GPU. We pre-fill the
    bounding box from the accessory category so the output already fits
-   marketplace size caps. Outputs untextured `.obj`.
-2. **`instantmesh` (TencentARC/InstantMesh)** — image-to-3D via HF Space.
-   Free on ZeroGPU, rate-limited. Outputs GLB with vertex colors. Apply
-   axis fix (`vertices[:, [1, 2, 0]]`) for Roblox coordinate system.
-3. **`triposr` (Stability/Tripo)** — lighter image-to-3D fallback when
-   InstantMesh is queued/rate-limited. Lower quality but fast.
-4. **`sketchfab`** — asset-library remix path. Pull a CC0/CC-BY model,
+   marketplace size caps. Outputs untextured `.obj`. Generates full closed
+   geometry (no missing back) — prefer it when only a text prompt is given.
+2. **`trellis` (trellis-community/TRELLIS)** — **PRIMARY for image-to-3D.**
+   Best free single-image quality; outputs a *textured* GLB. Free on ZeroGPU.
+   Driver: `/start_session` → `/preprocess_image` → `/generate_and_extract_glb`.
+   Single-view backs are shallow + hallucinate flat planes — always run the
+   `clean` step (see below).
+3. **`hunyuan3d-space` (tencent/Hunyuan3D-2)** — image-to-3D, free HF Space,
+   **multi-view capable.** Pass up to 4 images `[front, back, left, right]`
+   via `/generation_all` for full 360° geometry — the biggest fix for the
+   shallow-back problem. Single image also works.
+4. **`instantmesh` / `triposr`** — lighter image-to-3D fallbacks when TRELLIS /
+   Hunyuan are queued. InstantMesh pipeline: `/check_input_image` →
+   `/preprocess` → `/generate_mvs` → `/make3d`.
+5. **`sketchfab`** — asset-library remix path. Pull a CC0/CC-BY model,
    modify in Blender. Working via BlenderMCP today.
-5. **`hyper3d`, `hunyuan3d`** — PAID. Do not propose unless user
-   explicitly opts in (see memory `feedback-paid-3d-generators`).
+6. **`hyper3d`, `hunyuan3d`** (paid Tencent-Cloud/BlenderMCP route) — PAID.
+   Do not propose unless user explicitly opts in (see memory
+   `feedback-paid-3d-generators`). NOTE: `hunyuan3d-space` above is the FREE
+   HF-Space variant and is distinct from this paid `hunyuan3d`.
 
-Image-to-3D path: input image → `instantmesh` or `triposr` → import to
-Blender → prep → validate. Text-to-3D path: prompt → `cube3d` (with bbox
-pre-constraint from accessory category) → import → texture-bake → prep →
-validate.
+Two quality levers (both implemented):
+- **Preprocessing** (`generate._prepare_image`): square-pad on white + upscale.
+  Low-res / off-center inputs are the #1 cause of bad reconstructions.
+- **Cleanup** (`postprocess.clean_mesh`, CLI `roblox-ugc clean`): splits the
+  mesh into connected components and drops the paper-thin planes + needle
+  strands single-view models hallucinate. trimesh-based (needs `networkx`),
+  bpy-free. Connected needles survive component-splitting — a known limit.
+
+Image-to-3D path: image → `trellis` (or multi-view `hunyuan3d-space`) → `clean`
+→ import to Blender → autoprep/autorig → validate. Text-to-3D path: prompt →
+`cube3d` (bbox pre-constraint) → import → texture-bake → prep → validate.
+
+Making our own: training a foundation model from scratch is infeasible
+free/local. "Our own" = this multi-stage *pipeline* (preprocess → best free
+recon → cleanup → Roblox-prep), and the multi-view route (synthesize/supply
+back+side views → Hunyuan3D-2mv) is where the real fidelity gains are.
 
 ## Architecture
 

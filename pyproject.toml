@@ -15,9 +15,11 @@ dependencies = [
 
 [project.optional-dependencies]
 gen = [
-    "gradio-client>=1.3",  # call HF Spaces for cube3d / InstantMesh / TripoSR
-    "Pillow>=10.0",        # texture-size validation, optional image preprocessing
+    "gradio-client>=1.3",  # call HF Spaces for TRELLIS / Hunyuan3D / InstantMesh / cube3d
+    "Pillow>=10.0",        # texture-size validation + image preprocessing (square-pad/upscale)
     "rembg>=2.0",          # background removal for image-to-3D inputs
+    "trimesh>=4.0",        # mesh post-processing (strip plane/needle artifacts)
+    "networkx>=3.0",       # trimesh connected-components backend (split)
     "huggingface-hub>=0.24",
 ]
 

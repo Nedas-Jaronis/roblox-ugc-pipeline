@@ -125,46 +125,157 @@ def gen_cube3d(req: GenerationRequest, project_dir: Path) -> GenerationResult:
     )
 
 
-# ---- InstantMesh (image-to-3D) -------------------------------------------
+# ---- shared image-to-3D helpers ------------------------------------------
+
+def _client(space_id: str):
+    """Build a gradio Client, tolerant of gradio_client version differences."""
+    Client = _gradio_client()
+    token = _hf_token()
+    if token:
+        os.environ["HF_TOKEN"] = token
+        os.environ["HUGGING_FACE_HUB_TOKEN"] = token
+    try:
+        return Client(space_id, hf_token=token) if token else Client(space_id)
+    except TypeError:
+        return Client(space_id)
+
+
+def _handle(path_or_out):
+    """Wrap a local path / gradio output as a gradio file input."""
+    from gradio_client import handle_file
+    p = path_or_out
+    if isinstance(p, dict):
+        p = p.get("path") or p.get("url")
+    return handle_file(str(p))
+
+
+def _prepare_image(path: Path, run_dir: Path, size: int = 1024) -> str:
+    """Square-pad on white + upscale so the Space gets a clean, centered, high-res
+    subject. Low-res / off-center inputs are the #1 cause of bad reconstructions."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return str(Path(path).resolve())
+    im = Image.open(path).convert("RGBA")
+    w, h = im.size
+    side = int(max(w, h) * 1.1)  # small margin
+    bg = Image.new("RGBA", (side, side), (255, 255, 255, 255))
+    bg.paste(im, ((side - w) // 2, (side - h) // 2), im)
+    canvas = bg.convert("RGB")
+    if side < size:
+        canvas = canvas.resize((size, size), Image.LANCZOS)
+    out = run_dir / "input_prepared.png"
+    canvas.save(out)
+    return str(out)
+
+
+def _finish(run_dir: Path, req: GenerationRequest, provider: str,
+            result_path: str, extra: dict) -> GenerationResult:
+    dst = run_dir / f"model{Path(result_path).suffix or '.glb'}"
+    shutil.copy(result_path, dst)
+    _write_meta(run_dir, req, provider=provider, asset=dst)
+    return GenerationResult(provider=provider, run_dir=run_dir, asset_path=dst,
+                            request=req, extra=extra)
+
+
+# ---- TRELLIS (image-to-3D, PRIMARY — best free quality + textures) --------
+
+def gen_trellis(req: GenerationRequest, project_dir: Path) -> GenerationResult:
+    if req.modality not in ("image", "multi") or not req.image_paths:
+        raise ValueError("TRELLIS is image-to-3D. Use cube3d for text.")
+    run_dir = _new_run_dir(project_dir, "trellis")
+    space_id = os.environ.get("ROBLOX_UGC_TRELLIS_SPACE", "trellis-community/TRELLIS")
+    client = _client(space_id)
+
+    img = _prepare_image(req.image_paths[0], run_dir)
+    try:
+        client.predict(api_name="/start_session")
+    except Exception:  # noqa: BLE001  (stateless deployments don't need it)
+        pass
+    processed = client.predict(_handle(img), api_name="/preprocess_image")
+    out = client.predict(
+        _handle(processed),  # image prompt
+        [],                  # multiimages
+        0,                   # seed
+        7.5,                 # ss_guidance_strength
+        25,                  # ss_sampling_steps  (raised from 12 for detail)
+        3.0,                 # slat_guidance_strength
+        25,                  # slat_sampling_steps
+        "stochastic",        # multiimage_algo
+        0.92,                # mesh_simplify  (less aggressive than 0.95 default)
+        2048,                # texture_size   (raised from 1024)
+        api_name="/generate_and_extract_glb",
+    )
+    result_path = _coerce_path(out, prefer_ext=(".glb",))
+    if not result_path:
+        raise RuntimeError(f"TRELLIS Space '{space_id}' returned no GLB. out={out!r}")
+    return _finish(run_dir, req, "trellis", result_path,
+                   {"space_id": space_id, "input_image": img})
+
+
+# ---- Hunyuan3D-2 (image-to-3D, free HF Space, MULTI-VIEW capable) ---------
+
+def gen_hunyuan3d_space(req: GenerationRequest, project_dir: Path) -> GenerationResult:
+    """tencent/Hunyuan3D-2 free Space. Pass up to 4 images as
+    [front, back, left, right] for a full 360° reconstruction (the biggest
+    single-image quality fix), or one image for the single-view path."""
+    if req.modality not in ("image", "multi") or not req.image_paths:
+        raise ValueError("Hunyuan3D Space is image-to-3D. Use cube3d for text.")
+    run_dir = _new_run_dir(project_dir, "hunyuan3d")
+    space_id = os.environ.get("ROBLOX_UGC_HUNYUAN_SPACE", "tencent/Hunyuan3D-2")
+    client = _client(space_id)
+
+    prepared = [_prepare_image(p, run_dir, size=1024) for p in req.image_paths]
+    if len(prepared) >= 2:  # multi-view: front, back, left, right
+        slots = [None, None, None, None]
+        for i in range(min(len(prepared), 4)):
+            slots[i] = _handle(prepared[i])
+        image_args = [None, *slots]               # image=None, then 4 mv slots
+    else:
+        image_args = [_handle(prepared[0]), None, None, None, None]
+
+    out = client.predict(
+        None,            # caption
+        *image_args,     # image, mv_front, mv_back, mv_left, mv_right
+        30,              # steps
+        5.0,             # guidance_scale
+        1234,            # seed
+        320,             # octree_resolution (raised from 256 for detail)
+        True,            # check_box_rembg
+        8000,            # num_chunks
+        False,           # randomize_seed
+        api_name="/generation_all",
+    )
+    result_path = _coerce_path(out, prefer_ext=(".glb", ".obj"))
+    if not result_path:
+        raise RuntimeError(f"Hunyuan3D Space '{space_id}' returned no mesh. out={out!r}")
+    return _finish(run_dir, req, "hunyuan3d", result_path,
+                   {"space_id": space_id, "input_images": prepared})
+
+
+# ---- InstantMesh (image-to-3D, lighter fallback) -------------------------
 
 def gen_instantmesh(req: GenerationRequest, project_dir: Path) -> GenerationResult:
     if req.modality not in ("image", "multi") or not req.image_paths:
         raise ValueError("InstantMesh needs at least one image.")
-    Client = _gradio_client()
     run_dir = _new_run_dir(project_dir, "instantmesh")
     space_id = os.environ.get("ROBLOX_UGC_INSTANTMESH_SPACE", "TencentARC/InstantMesh")
-    hf_token = os.environ.get("HF_TOKEN")
-    client = Client(space_id, hf_token=hf_token) if hf_token else Client(space_id)
+    client = _client(space_id)
 
-    img_path = str(req.image_paths[0].resolve())
-    # InstantMesh Space pipeline: preprocess -> generate_mvs -> make3d.
-    # We try a single end-to-end endpoint first, then fall back to chained calls.
-    candidates: list[tuple[str, dict]] = [
-        ("/predict", dict(input_image=img_path)),
-    ]
-    last_err: Exception | None = None
-    result_path: str | None = None
-    for api_name, kwargs in candidates:
-        try:
-            out = client.predict(api_name=api_name, **kwargs)
-            result_path = _coerce_path(out, prefer_ext=(".glb", ".obj"))
-            if result_path:
-                break
-        except Exception as e:  # noqa: BLE001
-            last_err = e
+    img = _prepare_image(req.image_paths[0], run_dir)
+    # Real InstantMesh pipeline: check -> preprocess -> generate_mvs -> make3d.
+    try:
+        client.predict(_handle(img), api_name="/check_input_image")
+    except Exception:  # noqa: BLE001
+        pass
+    processed = client.predict(_handle(img), True, api_name="/preprocess")
+    client.predict(_handle(processed), 75, 42, api_name="/generate_mvs")
+    out = client.predict(api_name="/make3d")
+    result_path = _coerce_path(out, prefer_ext=(".glb", ".obj"))
     if not result_path:
-        raise RuntimeError(
-            f"InstantMesh Space '{space_id}' did not return a usable mesh. "
-            f"Last error: {last_err}."
-        )
-
-    dst = run_dir / f"model{Path(result_path).suffix or '.glb'}"
-    shutil.copy(result_path, dst)
-    _write_meta(run_dir, req, provider="instantmesh", asset=dst)
-    return GenerationResult(
-        provider="instantmesh", run_dir=run_dir, asset_path=dst, request=req,
-        extra={"space_id": space_id, "input_image": img_path},
-    )
+        raise RuntimeError(f"InstantMesh Space '{space_id}' returned no mesh. out={out!r}")
+    return _finish(run_dir, req, "instantmesh", result_path,
+                   {"space_id": space_id, "input_image": img})
 
 
 # ---- helpers ---------------------------------------------------------------
@@ -209,6 +320,8 @@ def _write_meta(run_dir: Path, req: GenerationRequest, provider: str, asset: Pat
 
 _DRIVERS = {
     "cube3d": gen_cube3d,
+    "trellis": gen_trellis,
+    "hunyuan3d-space": gen_hunyuan3d_space,
     "instantmesh": gen_instantmesh,
 }
 
