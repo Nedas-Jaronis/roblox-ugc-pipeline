@@ -149,24 +149,47 @@ def _handle(path_or_out):
     return handle_file(str(p))
 
 
-def _prepare_image(path: Path, run_dir: Path, size: int = 1024) -> str:
-    """Square-pad on white + upscale so the Space gets a clean, centered, high-res
-    subject. Low-res / off-center inputs are the #1 cause of bad reconstructions."""
+def _prepare_image(path: Path, run_dir: Path, size: int = 1024,
+                   remove_bg: bool = True) -> str:
+    """Isolate the subject and center it on a clean square canvas.
+
+    Two fixes that matter for reconstruction quality:
+      * background removal (rembg, if installed) — a cluttered/again-colored
+        background is the main cause of hallucinated backdrop planes + floaters,
+      * square-pad + upscale — low-res / off-center inputs reconstruct poorly.
+
+    Falls back gracefully (no rembg -> white-pad; no Pillow -> raw path)."""
     try:
         from PIL import Image
     except ImportError:
         return str(Path(path).resolve())
+
     im = Image.open(path).convert("RGBA")
+    if remove_bg:
+        try:
+            from rembg import remove  # type: ignore
+            im = remove(im)  # subject on transparent bg
+            im = _autocrop_alpha(im) or im
+        except Exception:  # noqa: BLE001  (rembg missing or failed -> skip)
+            pass
+
     w, h = im.size
-    side = int(max(w, h) * 1.1)  # small margin
-    bg = Image.new("RGBA", (side, side), (255, 255, 255, 255))
-    bg.paste(im, ((side - w) // 2, (side - h) // 2), im)
-    canvas = bg.convert("RGB")
+    side = int(max(w, h) * 1.15)  # margin so the subject isn't edge-to-edge
+    canvas = Image.new("RGBA", (side, side), (255, 255, 255, 255))
+    canvas.paste(im, ((side - w) // 2, (side - h) // 2), im)
+    canvas = canvas.convert("RGB")
     if side < size:
         canvas = canvas.resize((size, size), Image.LANCZOS)
     out = run_dir / "input_prepared.png"
     canvas.save(out)
     return str(out)
+
+
+def _autocrop_alpha(im):
+    """Crop an RGBA image to its non-transparent bounding box (so padding centers
+    the actual subject, not the original framing)."""
+    bbox = im.getbbox()
+    return im.crop(bbox) if bbox else None
 
 
 def _finish(run_dir: Path, req: GenerationRequest, provider: str,

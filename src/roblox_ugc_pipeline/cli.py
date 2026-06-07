@@ -320,7 +320,8 @@ def _clean_impl(source: Path, out: Path) -> None:
     console.print(
         f"[green]Cleaned:[/green] {out}\n"
         f"[dim]components {rep.components_in}->{rep.components_kept} "
-        f"(removed {rep.removed_planes} planes, {rep.removed_needles} needles); "
+        f"(removed {rep.removed_planes} planes, {rep.removed_needles} needles, "
+        f"{rep.removed_floaters} floaters from {rep.clusters} clusters); "
         f"tris {rep.tris_in}->{rep.tris_out}[/dim]"
     )
 
