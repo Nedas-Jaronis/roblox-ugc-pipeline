@@ -167,8 +167,12 @@ Claude Code and just ask:
 
 The assistant drives BlenderMCP, runs `inspect`/`validate`, and proposes fixes.
 
-The Colab notebooks in [`colab/`](./colab/) (`cube3d_generate.ipynb`,
-`face_decals.ipynb`) run the cube3d and face-decal paths on free GPUs.
+The Colab notebooks in [`colab/`](./colab/) run the heavy generation on a free
+GPU with **no HuggingFace quota limits**:
+- `image_to_3d_sf3d.ipynb` — image → clean textured mesh via **Stable Fast 3D**
+  on a T4 (recommended path for image-to-3D; self-hosted, unlimited).
+- `cube3d_generate.ipynb` — text → mesh via Roblox cube3d.
+- `face_decals.ipynb` — anime face decals via FLUX.
 
 ---
 
