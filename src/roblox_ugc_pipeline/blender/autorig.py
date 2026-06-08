@@ -722,10 +722,19 @@ def force_opaque_materials(objs) -> None:
 
 def export_fbx(armature: bpy.types.Object, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    # SCALE: the rig is built in meters (height = studs * 0.28). With
+    # apply_unit_scale the exporter multiplies by 100 (m->cm), so a 5-stud avatar
+    # left Blender as "140", which Roblox reads as ~140 studs and rescales to ~3%
+    # to fit R15 — and it stores every part's ImportOrigin/CageOrigin at that ~28x
+    # size, blowing past the <=8 / <=10 caps (the bulk of the validation warnings).
+    # global_scale = 1/(0.28*100) cancels both conversions so the FBX emits the
+    # avatar at its true stud size (~5), no rescale, and origin magnitudes are small.
     bpy.ops.export_scene.fbx(
         filepath=str(path),
         use_selection=False,
         apply_unit_scale=True,
+        global_scale=1.0 / (0.28 * 100.0),
+        apply_scale_options="FBX_SCALE_NONE",
         bake_space_transform=True,
         object_types={"MESH", "EMPTY", "ARMATURE"},
         add_leaf_bones=False,
