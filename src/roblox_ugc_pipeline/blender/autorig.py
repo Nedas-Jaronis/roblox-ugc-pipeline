@@ -155,16 +155,18 @@ def fit_mesh_to_template(mesh: bpy.types.Object, target_height_studs: float = 5.
             )
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 
-    # Uniform scale so Z extent equals target_height (converted to meters).
-    target_height_m = target_height_studs * 0.28  # 1 stud == 0.28 m
+    # Build at NATIVE STUD SCALE: 1 Blender unit == 1 stud. Roblox reads raw FBX
+    # coords as studs, so building in studs (not meters) + a clean unit-less export
+    # lands the avatar at its true size with NO global_scale trickery (which baked a
+    # scaled armature and broke Avatar Setup's attachment generation).
+    target_height_units = target_height_studs
     ex = _extents(mesh)
     if ex.z > 1e-6:
-        s = target_height_m / ex.z
+        s = target_height_units / ex.z
         bpy.ops.transform.resize(value=(s, s, s))
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         log["scale_factor"] = round(s, 4)
         log["target_height_studs"] = target_height_studs
-        log["target_height_m"] = round(target_height_m, 4)
 
     # Center bbox at X=Y=0, base at Z=0.
     bb_min, bb_max = _world_bbox(mesh)
@@ -722,19 +724,15 @@ def force_opaque_materials(objs) -> None:
 
 def export_fbx(armature: bpy.types.Object, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    # SCALE: the rig is built in meters (height = studs * 0.28). With
-    # apply_unit_scale the exporter multiplies by 100 (m->cm), so a 5-stud avatar
-    # left Blender as "140", which Roblox reads as ~140 studs and rescales to ~3%
-    # to fit R15 — and it stores every part's ImportOrigin/CageOrigin at that ~28x
-    # size, blowing past the <=8 / <=10 caps (the bulk of the validation warnings).
-    # global_scale = 1/(0.28*100) cancels both conversions so the FBX emits the
-    # avatar at its true stud size (~5), no rescale, and origin magnitudes are small.
+    # SCALE: the rig is built at stud scale (1 unit = 1 stud). apply_unit_scale=False
+    # writes raw Blender units, so a 5-stud avatar exports as ~5 and Roblox imports it
+    # at true R15 size with no rescale — and origin magnitudes stay small. We do NOT
+    # use global_scale (it bakes a scaled armature that breaks Avatar Setup's
+    # attachment generation); building natively at stud scale avoids that entirely.
     bpy.ops.export_scene.fbx(
         filepath=str(path),
         use_selection=False,
-        apply_unit_scale=True,
-        global_scale=1.0 / (0.28 * 100.0),
-        apply_scale_options="FBX_SCALE_NONE",
+        apply_unit_scale=False,
         bake_space_transform=True,
         object_types={"MESH", "EMPTY", "ARMATURE"},
         add_leaf_bones=False,
@@ -783,10 +781,10 @@ def run_inplace(
 
     log: dict = {}
     log["fit"] = fit_mesh_to_template(mesh, target_height_studs=target_height)
-    # Armature template is in "Blender units = studs"; convert to meters so the
-    # armature bone positions match the mesh's meter-scaled rest pose.
-    armature_scale_m = (target_height / 5.0) * 0.28
-    armature, weight_hist, width_fit = attach_armature(mesh, scale=armature_scale_m)
+    # The R15 template is defined at ~5 units; the mesh is now built at stud scale
+    # (1 unit = 1 stud), so the armature scale is just target/5 (no meter conversion).
+    armature_scale = target_height / 5.0
+    armature, weight_hist, width_fit = attach_armature(mesh, scale=armature_scale)
     log["armature"] = armature.name
     log["template_width_fit"] = width_fit
     log["weights_per_bone"] = weight_hist
