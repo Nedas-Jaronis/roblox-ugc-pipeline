@@ -400,7 +400,29 @@ def split_mesh_by_bone(
         # Invert selection -> delete (keep only this bone's polys).
         bpy.ops.mesh.select_all(action="INVERT")
         bpy.ops.mesh.delete(type="FACE")
+        # Drop orphan verts left behind by face deletion — these stray points
+        # sit far from the part surface and otherwise inflate its bbox/cage
+        # (the source of "cage vertex N studs from render mesh" warnings).
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.delete_loose()
         bpy.ops.object.mode_set(mode="OBJECT")
+
+        # Re-origin the piece to its bone JOINT. Each piece is a DUPLICATE of the
+        # whole mesh with other bones' faces deleted, so it keeps the source
+        # pivot at world (0,0,0) while this part's geometry sits several studs
+        # away. Roblox derives each MeshPart's ImportOrigin (and the cage's
+        # CageOrigin) from that pivot->geometry offset and rejects PositionMagnitude
+        # > 8 / > 10 — one warning per part. Snapping the origin to the bone head
+        # collapses that offset to ~0. origin_set preserves WORLD vertex positions,
+        # so the armature modifier + skin weights are unaffected.
+        head_world = r15_mod.bone_world_position(armature, bone, "head")
+        _prev_cursor = tuple(bpy.context.scene.cursor.location)
+        bpy.context.scene.cursor.location = head_world
+        bpy.ops.object.select_all(action="DESELECT")
+        piece.select_set(True)
+        bpy.context.view_layer.objects.active = piece
+        bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
+        bpy.context.scene.cursor.location = _prev_cursor
 
         pieces[bone] = piece
 
@@ -548,6 +570,43 @@ def _count_tris(obj: bpy.types.Object) -> int:
         obj.to_mesh_clear()
 
 
+# --- opacity: strip inherited transparency before export ------------------
+
+def force_opaque_materials(objs) -> None:
+    """Make every piece's material fully opaque + double-sided.
+
+    The reconstructed mesh arrives with Hunyuan/TripoSG's material, which uses
+    backface culling + HASHED (alpha-clip) blending and an alpha channel. Roblox
+    renders each body part from front/back/left/right and measures how much of
+    the bounding box it fills; a transparent/single-sided material reads as empty
+    and fails the "not opaque enough" (>= 0.30 fill) check. Force opaque here so
+    the exported parts render solid.
+    """
+    for o in objs:
+        for mat in o.data.materials:
+            if mat is None:
+                continue
+            try:
+                mat.use_backface_culling = False
+            except (AttributeError, TypeError):
+                pass
+            for attr, val in (("blend_method", "OPAQUE"),
+                              ("shadow_method", "OPAQUE"),
+                              ("show_transparent_back", False)):
+                try:
+                    setattr(mat, attr, val)
+                except (AttributeError, TypeError):
+                    pass
+            if mat.use_nodes:
+                bsdf = next((n for n in mat.node_tree.nodes
+                             if n.type == "BSDF_PRINCIPLED"), None)
+                if bsdf is not None and "Alpha" in bsdf.inputs:
+                    alpha = bsdf.inputs["Alpha"]
+                    for link in list(alpha.links):
+                        mat.node_tree.links.remove(link)
+                    alpha.default_value = 1.0
+
+
 # --- step 8: export --------------------------------------------------------
 
 def export_fbx(armature: bpy.types.Object, path: Path) -> None:
@@ -665,6 +724,10 @@ def run_inplace(
                 view_axis="-Y",
             )
         _attach_baked_textures_to_pieces(pieces, out_dir)
+
+    # Strip any inherited transparency/backface-culling so Roblox's per-view
+    # opacity check passes (applies to both textured + untextured pieces).
+    force_opaque_materials(pieces.values())
 
     if out_fbx:
         export_fbx(armature, Path(out_fbx))
