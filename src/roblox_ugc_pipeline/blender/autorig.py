@@ -570,6 +570,117 @@ def _count_tris(obj: bpy.types.Object) -> int:
         obj.to_mesh_clear()
 
 
+# --- spec bbox clamp + de-overlap + stray-component drop -------------------
+
+# Map each R15 bone to its CLASSIC_BODY_BOUNDS group.
+_BONE_GROUP: dict[str, str] = {
+    "Head": "Head",
+    "UpperTorso": "Torso", "LowerTorso": "Torso",
+    "LeftUpperArm": "Arm", "LeftLowerArm": "Arm", "LeftHand": "Arm",
+    "RightUpperArm": "Arm", "RightLowerArm": "Arm", "RightHand": "Arm",
+    "LeftUpperLeg": "Leg", "LeftLowerLeg": "Leg", "LeftFoot": "Leg",
+    "RightUpperLeg": "Leg", "RightLowerLeg": "Leg", "RightFoot": "Leg",
+}
+
+
+def _keep_largest_component(piece: bpy.types.Object) -> int:
+    """Drop all but the largest connected component of a piece (kills the stray
+    far-away shards that inflate the part bbox -> 'low visibility geometry' +
+    'not opaque enough', since opacity is fill-fraction RELATIVE to the bbox)."""
+    bpy.ops.object.select_all(action="DESELECT")
+    piece.select_set(True)
+    bpy.context.view_layer.objects.active = piece
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.mesh.separate(type="LOOSE")
+    parts = [o for o in bpy.context.selected_objects if o.type == "MESH"]
+    if len(parts) <= 1:
+        return 0
+    parts.sort(key=lambda o: len(o.data.polygons), reverse=True)
+    dropped = len(parts) - 1
+    for o in parts[1:]:
+        bpy.data.objects.remove(o, do_unlink=True)
+    return dropped
+
+
+def clamp_pieces_to_spec_bounds(pieces: dict[str, bpy.types.Object]) -> dict:
+    """Trim each leg to its own side of the body midline and drop stray
+    components, so the per-part bbox fits Roblox's caps.
+
+    The proximity weighting pulls the wide onesie belly/skirt fabric into BOTH
+    legs, so each leg's X extent exceeds the 1.5-stud Leg cap, the two legs
+    interpenetrate ('legs overlap by N studs'), and far shards inflate the box
+    ('low visibility geometry' + the per-view opacity fill). Cutting every leg
+    face that crosses X=0 makes each leg one-sided (de-overlaps + shrinks X),
+    and keep-largest-component removes the shards.
+    """
+    log: dict = {}
+    for bone, piece in pieces.items():
+        if _BONE_GROUP.get(bone) != "Leg":
+            continue
+        is_left = bone.startswith("Left")
+        M = piece.matrix_world
+        bpy.ops.object.select_all(action="DESELECT")
+        piece.select_set(True)
+        bpy.context.view_layer.objects.active = piece
+        bpy.ops.object.mode_set(mode="OBJECT")
+        deleted = 0
+        for poly in piece.data.polygons:
+            verts = poly.vertices
+            cx = sum((M @ piece.data.vertices[vi].co).x for vi in verts) / len(verts)
+            # keep left leg on -X, right leg on +X (0.05-stud tolerance at the seam)
+            poly.select = (cx > 0.05) if is_left else (cx < -0.05)
+            deleted += 1 if poly.select else 0
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.delete(type="FACE")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.delete_loose()
+        bpy.ops.object.mode_set(mode="OBJECT")
+        dropped = _keep_largest_component(piece)
+        log[bone] = {"trimmed_faces": deleted, "dropped_components": dropped}
+    return log
+
+
+# --- cages: per-part WrapTarget so Roblox doesn't auto-generate bad ones ----
+
+def generate_outer_cages(
+    pieces: dict[str, bpy.types.Object],
+    armature: bpy.types.Object,
+) -> dict[str, str]:
+    """Create a `<Bone>_OuterCage` skinned duplicate of each final piece.
+
+    Roblox needs a WrapTarget cage per body part. With NO cage in the FBX,
+    Studio auto-generates fallback cages whose ImportOrigin/CageOrigin
+    PositionMagnitude, cage-to-mesh distance, and size-difference all fail (the
+    ~25 `*WrapTarget` warnings). A duplicate of the FINAL decimated piece hugs
+    the render mesh exactly (distance ~0 << 0.3 cap, size-diff 0 << 1.0) and
+    inherits the piece's joint origin, so those checks pass. Skinned to the same
+    armature so it deforms with the body; NOT decimated (Roblox forbids altering
+    cage topology, and a copy of the already-budgeted piece is fine).
+    """
+    spec = _spec()
+    cages: dict[str, bpy.types.Object] = {}
+    for bone, piece in pieces.items():
+        bpy.ops.object.select_all(action="DESELECT")
+        piece.select_set(True)
+        bpy.context.view_layer.objects.active = piece
+        bpy.ops.object.duplicate(linked=False)
+        cage = bpy.context.view_layer.objects.active
+        cage.name = spec.outer_cage_name(bone)
+        cage.data.name = cage.name
+        found = False
+        for mod in cage.modifiers:
+            if mod.type == "ARMATURE":
+                mod.object = armature
+                found = True
+                break
+        if not found:
+            m = cage.modifiers.new(name="rc_armature", type="ARMATURE")
+            m.object = armature
+        cage.parent = armature
+        cages[bone] = cage
+    return {b: c.name for b, c in cages.items()}
+
+
 # --- opacity: strip inherited transparency before export ------------------
 
 def force_opaque_materials(objs) -> None:
@@ -641,6 +752,7 @@ def run_inplace(
     mesh_name: str | None = None,
     target_height: float = 5.0,
     decimate: bool = True,
+    generate_cages: bool = True,
     out_fbx: str | None = None,
     texture_prompt: str | None = None,
     texture_source_image: str | None = None,
@@ -670,11 +782,19 @@ def run_inplace(
     log["template_width_fit"] = width_fit
     log["weights_per_bone"] = weight_hist
     pieces = split_mesh_by_bone(mesh, armature)
+    # Trim legs to one side of the midline + drop stray shards BEFORE decimation
+    # so the tri budget rebalances over the kept geometry (fixes leg X>1.5 cap,
+    # inter-leg overlap, stray low-visibility geometry, and bbox-relative opacity).
+    log["clamp"] = clamp_pieces_to_spec_bounds(pieces)
     reattach_pieces_to_armature(pieces, armature)
     log["pieces"] = {bone: o.name for bone, o in pieces.items()}
     log["attachments_stamped"] = stamp_body_attachments(armature)
     if decimate:
         log["decimate"] = decimate_per_group(pieces)
+    # Generate per-part WrapTarget cages AFTER decimation so each cage hugs the
+    # final render mesh (clears the ~25 *WrapTarget origin/distance/size warnings).
+    if generate_cages:
+        log["cages"] = generate_outer_cages(pieces, armature)
 
     if texture_prompt or texture_source_image or multi_view_sources:
         from . import project_paint
