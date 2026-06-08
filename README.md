@@ -171,9 +171,13 @@ The Colab notebooks in [`colab/`](./colab/) run the heavy generation on a free
 T4 GPU with **no HuggingFace quota limits** (each builds an isolated venv and
 runs as a subprocess, so Colab's base env is untouched):
 - `image_to_3d_triposg.ipynb` — image → **volumetric** watertight mesh via
-  **TripoSG** (shape-diffusion → real 360° depth; geometry only, bake texture in
-  Blender). Best when you need true 3D volume. *(MIT code/weights, but its `diso`
-  marching-cubes op is CC-BY-NC — resolve before commercial resale.)*
+  **TripoSG** (shape-diffusion → real 360° depth; geometry only). Best when you
+  need true 3D volume. *(MIT code/weights, but its `diso` marching-cubes op is
+  CC-BY-NC — resolve before commercial resale.)*
+- `texture_hunyuan_paint.ipynb` — texture an **existing mesh** (e.g. the TripoSG
+  output) from one front image via **Hunyuan3D-2 Paint** (synchronized multi-view
+  diffusion → consistent baked UV albedo, not a stretched front-projection). The
+  proper way to color a geometry-only mesh. *(Tencent Community License.)*
 - `image_to_3d_sf3d.ipynb` — image → clean *textured* mesh via **Stable Fast 3D**
   (fast, one clean mesh, but single-view → shallow/relief depth).
 - `cube3d_generate.ipynb` — text → mesh via Roblox cube3d.
