@@ -26,7 +26,7 @@ with free models and no per-asset cost.
 ```
                  ┌─────────────────────────────────────────────────────────┐
   text prompt ──▶│ cube3d (Roblox's text-to-3D foundation model)           │
-  image       ──▶│ InstantMesh / TripoSR (image-to-3D)                     │──┐
+  image       ──▶│ TripoSG volumetric mesh + Hunyuan3D-2 Paint texture     │──┐
   Sketchfab   ──▶│ CC0/CC-BY asset remix                                   │  │
                  └─────────────────────────────────────────────────────────┘  │
                                                                                 ▼
@@ -52,10 +52,10 @@ with free models and no per-asset cost.
 | Area | What's built |
 |---|---|
 | **Text → 3D** | `cube3d` (Roblox's own foundation model) via HF Space, bbox-constrained to the accessory category so output is born marketplace-sized. Full closed geometry. |
-| **Image → 3D** | **TRELLIS** (best free quality, textured GLB) primary; **Hunyuan3D-2** for multi-view (front/back/left/right → full 360°); InstantMesh/TripoSR fallbacks. Inputs are auto square-padded + upscaled. All free HF Spaces. |
+| **Image → 3D** | **TripoSG** (shape-*diffusion* → SDF → marching cubes → a watertight, *volumetric* mesh) is the recommended path when you need real 3D depth — self-hosted free on a Colab **L4** (no HF quota). Geometry-only, so it's textured by **Hunyuan3D-2 Paint** (synchronized multi-view diffusion → one baked 2048² UV albedo). **TRELLIS**/InstantMesh/TripoSR remain lighter HF-Space fallbacks. Inputs auto square-padded + upscaled. |
 | **Mesh cleanup** | `clean` strips the paper-thin planes + needle artifacts single-view models hallucinate for unseen geometry (trimesh, bpy-free). |
 | **Asset remix** | Sketchfab CC0/CC-BY pull + in-Blender edit (via BlenderMCP). |
-| **Auto-rigging** | Arbitrary humanoid mesh → fitted to R15 proportions → heat-diffusion auto-weights → split into exact `<Bone>_Geo` meshes → `*_Att` attachments stamped at spec positions → per-group decimation to avatar tri budgets. |
+| **Auto-rigging** | Arbitrary humanoid mesh → fitted to R15 proportions → heat-diffusion auto-weights → split into exact `<Bone>_Geo` meshes → `*_Att` attachments stamped at spec positions → per-group decimation to avatar tri budgets → per-part `<Bone>_OuterCage` meshes → exported FBX at **true stud scale** (so Studio imports at R15 size with no rescale). |
 | **Texturing** | Text → multi-view Stable Diffusion images → camera-projected UVs → baked into a single shared 2048² BaseColor PNG. Also bakes vertex-color / Sketchfab meshes into a clean Principled-BSDF texture. |
 | **Face decals** | Face PNG → flat handle plane + `FaceCenterAttachment`, exported as a Roblox Face Accessory. |
 | **Previews** | Headless 4-view turntable renders for marketplace thumbnails. |
@@ -237,6 +237,31 @@ src/roblox_ugc_pipeline/
 
 See [CLAUDE.md](./CLAUDE.md) for the deeper architectural overview and the
 generation-provider priority order.
+
+---
+
+## Avatar bodies vs. accessories — what reliably ships
+
+The **mesh + texture** stages are solid. From one image you get a clean,
+volumetric, textured, R15-rigged FBX — 15 `<Bone>_Geo` parts, per-group tri
+budgets, attachments, per-part `_OuterCage` cages, exported at true stud scale.
+That FBX **works in-experience**: it imports, rigs, and animates as a custom
+character.
+
+Selling a custom **avatar body** on the Marketplace is a much higher bar.
+Roblox's avatar validation enforces strict per-part bounding-box caps *and* a
+**Dynamic Head** (17 FACS expression poses + an eye/mouth-aligned facial cage),
+and an organic, AI-reconstructed body usually can't satisfy them at any uniform
+scale — Studio will literally report *"no valid scale passes individual body
+part requirements"* (shrink the head to fit its cap and the limbs drop below
+their minimums). That's a shape-vs-spec conflict, not a tooling bug.
+
+So the realistic Marketplace targets are **rigid accessories** (hats, hair,
+back/face items — no cages, no dynamic head, just a 4k-tri cap + one
+attachment), while full bodies are best used **in-experience** or finished
+through Studio's Avatar Setup (which generates the dynamic head). The mesh +
+texture problem is essentially solved with free tools; the remaining gap is
+platform avatar specs built for hand-authored humanoids.
 
 ---
 

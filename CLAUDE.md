@@ -45,9 +45,21 @@ Two quality levers (both implemented):
   strands single-view models hallucinate. trimesh-based (needs `networkx`),
   bpy-free. Connected needles survive component-splitting — a known limit.
 
-Image-to-3D path: image → `trellis` (or multi-view `hunyuan3d-space`) → `clean`
-→ import to Blender → autoprep/autorig → validate. Text-to-3D path: prompt →
-`cube3d` (bbox pre-constraint) → import → texture-bake → prep → validate.
+Image-to-3D path (PROVEN, recommended for volume): image → **TripoSG**
+(`colab/image_to_3d_triposg.ipynb`, self-host on a Colab L4 — shape diffusion →
+SDF → marching cubes → watertight *volumetric* mesh, geometry-only) → **Hunyuan3D-2
+Paint** (`colab/texture_hunyuan_paint.ipynb` — multi-view diffusion → baked 2048²
+UV albedo) → `clean` → import to Blender → autorig → validate. `trellis` /
+multi-view `hunyuan3d-space` (HF Spaces) remain fallbacks. Text-to-3D path: prompt
+→ `cube3d` (bbox pre-constraint) → import → texture-bake → prep → validate.
+
+Marketplace reality (learned the hard way): the autorig produces a clean,
+stud-scaled, caged R15 FBX that **works in-experience**, but a custom *avatar
+body* can't pass Marketplace validation — strict per-part bbox caps + a mandatory
+Dynamic Head (17 FACS + facial cage) mean an organic mesh hits "no valid scale
+passes individual body part requirements." Reliable Marketplace targets = rigid
+accessories (Hat/Hair/Back/Face — no cages/dynamic-head). See the memory
+`roblox-marketplace-avatar-validation` for the full per-error breakdown.
 
 Making our own: training a foundation model from scratch is infeasible
 free/local. "Our own" = this multi-stage *pipeline* (preprocess → best free
