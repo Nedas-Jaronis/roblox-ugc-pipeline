@@ -909,6 +909,12 @@ def run_inplace(
     # posing deforms organic bodies visibly (dragged side fabric). Enable only
     # for clean humanoids that need Avatar Auto-Setup's preferred A-pose.
     a_pose: bool = False,
+    # Turn OFF (along with generate_cages) when the FBX is destined for Studio
+    # AVATAR AUTO-SETUP: it generates attachments/cages/dynamic-head itself and
+    # its docs note auto-setup input is "not compatible with the traditional
+    # avatar creation workflow" — pre-stamped markers can make its own
+    # attachment generation fail.
+    stamp_attachments: bool = True,
     out_fbx: str | None = None,
     texture_prompt: str | None = None,
     texture_source_image: str | None = None,
@@ -949,7 +955,8 @@ def run_inplace(
     log["clamp"] = clamp_pieces_to_spec_bounds(pieces)
     reattach_pieces_to_armature(pieces, armature)
     log["pieces"] = {bone: o.name for bone, o in pieces.items()}
-    log["attachments_stamped"] = stamp_body_attachments(armature)
+    if stamp_attachments:
+        log["attachments_stamped"] = stamp_body_attachments(armature)
     if decimate:
         log["decimate"] = decimate_per_group(pieces)
     # Generate per-part WrapTarget cages AFTER decimation so each cage hugs the
