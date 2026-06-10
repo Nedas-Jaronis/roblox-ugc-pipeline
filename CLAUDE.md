@@ -2,6 +2,11 @@
 
 This file orients future assistant sessions to the repo. Read it first.
 
+For image→Marketplace runs, follow the staged operating procedure in
+`docs/pipeline-system-prompt.md` (intake/policy screen → spec lock → modeling →
+texturing → rig/export → compliance gate). Its numeric limits come from the
+official creator-docs; its "Repo notes" block records where practice diverges.
+
 ## What this is
 
 A local pipeline for generating, validating, and preparing 3D models for the
