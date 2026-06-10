@@ -11,7 +11,13 @@ from ..roblox_spec import (
 
 def check_avatar(report: MeshReport) -> list[Finding]:
     out: list[Finding] = []
-    total = report.triangle_count
+    # The render-mesh tri budget excludes cage meshes (WrapTargets have their
+    # own rules and don't count toward the 10,742 avatar budget).
+    cage_tris = sum(
+        o.triangle_count for o in report.objects
+        if o.name.endswith(("_OuterCage", "_InnerCage"))
+    )
+    total = report.triangle_count - cage_tris
     if total > AVATAR_BUDGET.max_total_tris:
         out.append(Finding(
             validator="polycount.avatar.total",

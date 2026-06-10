@@ -53,11 +53,14 @@ def _units() -> str:
     u = bpy.context.scene.unit_settings
     scale = u.scale_length  # in meters
     sysu = u.system
-    # Heuristic: Roblox studs are ~0.28m; if scene is "NONE" with scale 1.0 and
-    # objects are sized between 1 and 50, likely studs already.
+    # Roblox reads raw FBX units as STUDS, and this pipeline builds at
+    # 1 Blender unit = 1 stud, so a default scale-1.0 scene is studs — both as
+    # our convention and as what Roblox will actually do with the same file.
+    # (This used to return "meters", which inflated every validator size by
+    # 1/0.28 on stud-scale exports.)
     if sysu == "METRIC":
         if abs(scale - 1.0) < 1e-3:
-            return "meters"
+            return "studs"
         if abs(scale - 0.01) < 1e-3:
             return "centimeters"
         if abs(scale - 0.28) < 1e-3:

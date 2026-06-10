@@ -26,7 +26,9 @@ def check_avatar(report: MeshReport) -> list[Finding]:
             message="Could not determine units from source file; assuming studs for bounds check",
             remediation="Set scene units in Blender before exporting, or re-export with units metadata",
         ))
-    _, height, _ = _extents_studs(report)
+    # inspect.py emits Blender Z-up world coords, so height is the Z extent
+    # (reading Y here was a long-standing false positive on every avatar).
+    _, _, height = _extents_studs(report)
     if height < AVATAR_BUDGET.height_min:
         out.append(Finding(
             validator="bounds.avatar.height",

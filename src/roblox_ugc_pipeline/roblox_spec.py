@@ -121,6 +121,63 @@ BODY_TYPE_FULL_BOUNDS: dict[str, tuple[float, float, float]] = {
 }
 
 
+# --- Avatar body scale feasibility (min AND max, per body type) -------------
+#
+# Marketplace body validation searches for ONE uniform scale at which EVERY
+# assembled body part (Head, Torso, each Arm, each Leg) fits inside its
+# [min, max] size range simultaneously; if no such scale exists Studio reports
+# "no valid scale passes individual body part requirements". Axes are Roblox
+# convention: X = width, Y = HEIGHT, Z = depth.
+# Source: create.roblox.com/docs/art/characters/specifications (verified 2026-06).
+
+@dataclass(frozen=True)
+class PartScaleBounds:
+    min_size: tuple[float, float, float]  # studs (X, Y, Z)
+    max_size: tuple[float, float, float]
+
+
+# Minimum sizes are identical across all three body types.
+_PART_MINS: dict[str, tuple[float, float, float]] = {
+    "Head":  (0.5, 0.5, 0.5),
+    "Arm":   (0.25, 1.5, 0.25),
+    "Torso": (0.85, 1.7, 0.7),
+    "Leg":   (0.25, 1.4, 0.5),
+    "Total": (1.35, 3.6, 0.7),
+}
+
+BODY_SCALE_BOUNDS: dict[str, dict[str, PartScaleBounds]] = {
+    "Classic": {
+        "Head":  PartScaleBounds(_PART_MINS["Head"],  (1.5, 1.8, 2.0)),
+        "Arm":   PartScaleBounds(_PART_MINS["Arm"],   (2.0, 3.0, 2.0)),
+        "Torso": PartScaleBounds(_PART_MINS["Torso"], (4.0, 3.8, 2.0)),
+        "Leg":   PartScaleBounds(_PART_MINS["Leg"],   (1.5, 3.5, 2.0)),
+        "Total": PartScaleBounds(_PART_MINS["Total"], (8.0, 9.1, 2.0)),
+    },
+    "Normal": {
+        "Head":  PartScaleBounds(_PART_MINS["Head"],  (3.0, 2.0, 2.0)),
+        "Arm":   PartScaleBounds(_PART_MINS["Arm"],   (2.0, 4.5, 2.0)),
+        "Torso": PartScaleBounds(_PART_MINS["Torso"], (4.6, 3.5, 2.25)),
+        "Leg":   PartScaleBounds(_PART_MINS["Leg"],   (1.5, 4.0, 2.0)),
+        "Total": PartScaleBounds(_PART_MINS["Total"], (8.6, 9.5, 2.25)),
+    },
+    "Slender": {
+        "Head":  PartScaleBounds(_PART_MINS["Head"],  (2.0, 2.0, 2.0)),
+        "Arm":   PartScaleBounds(_PART_MINS["Arm"],   (1.5, 4.0, 2.0)),
+        "Torso": PartScaleBounds(_PART_MINS["Torso"], (3.0, 3.5, 2.0)),
+        "Leg":   PartScaleBounds(_PART_MINS["Leg"],   (1.5, 4.0, 2.0)),
+        "Total": PartScaleBounds(_PART_MINS["Total"], (6.0, 9.5, 2.0)),
+    },
+}
+
+# Which scale-bounds entry each validation group uses.
+SCALE_GROUP_FOR_BODY_GROUP: dict[str, str] = {
+    "Head": "Head",
+    "Torso": "Torso",
+    "LeftArm": "Arm", "RightArm": "Arm",
+    "LeftLeg": "Leg", "RightLeg": "Leg",
+}
+
+
 # --- Attachments per bone (avatar body required set) -----------------------
 
 # The avatar body mesh must include these empty/attachment markers, with the
