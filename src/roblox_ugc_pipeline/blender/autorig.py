@@ -199,7 +199,10 @@ def assign_weights_by_proximity(
     mesh: bpy.types.Object,
     armature: bpy.types.Object,
     top_k: int = 3,
-    falloff_power: float = 2.0,
+    # power 2 blended so broadly that posing the arms dragged big flaps of
+    # side-torso fabric along (winged silhouette + extra validation warnings);
+    # power 4 keeps blending at true joints but lets the nearest bone dominate.
+    falloff_power: float = 4.0,
 ) -> dict[str, int]:
     """Assign each vertex multi-bone falloff weights for smooth joint deformation.
 
@@ -354,7 +357,9 @@ def _angle_from_down(armature, top_bone: str, end_bone: str) -> float:
 def pose_to_a_pose(
     armature: bpy.types.Object,
     mesh: bpy.types.Object,
-    arm_angle_deg: float = 45.0,
+    # 30 deg is still comfortably inside the accepted A-pose band while moving
+    # far less fabric on chunky bodies than 45 did.
+    arm_angle_deg: float = 30.0,
     leg_angle_deg: float = 6.0,
 ) -> dict:
     """Swing the arms out to ~45° and spread the legs slightly, then bake that
