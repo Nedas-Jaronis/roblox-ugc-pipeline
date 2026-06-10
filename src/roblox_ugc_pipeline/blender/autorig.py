@@ -323,6 +323,94 @@ def attach_armature(
     return arm, histogram, fit_log
 
 
+# --- step 3.5: A-pose ------------------------------------------------------
+
+def _rotate_pose_bone_world(armature, bone_name: str, angle_rad: float) -> None:
+    """Rotate a pose bone (and thus its whole chain) about world +Y at its head.
+
+    Rotation about +Y by a POSITIVE angle swings a down-pointing limb toward
+    -X (the character's left); negative angles swing toward +X (right).
+    """
+    from mathutils import Matrix  # type: ignore
+    pb = armature.pose.bones[bone_name]
+    head_world = armature.matrix_world @ pb.head
+    R = (Matrix.Translation(head_world)
+         @ Matrix.Rotation(angle_rad, 4, "Y")
+         @ Matrix.Translation(-head_world))
+    pb.matrix = armature.matrix_world.inverted() @ R @ armature.matrix_world @ pb.matrix
+    bpy.context.view_layer.update()
+
+
+def _angle_from_down(armature, top_bone: str, end_bone: str) -> float:
+    """Degrees between the limb chain (top head -> end tail) and straight down."""
+    import math
+    v = (r15_mod.bone_world_position(armature, end_bone, "tail")
+         - r15_mod.bone_world_position(armature, top_bone, "head"))
+    if v.length < 1e-9:
+        return 0.0
+    return math.degrees(v.normalized().angle(Vector((0.0, 0.0, -1.0))))
+
+
+def pose_to_a_pose(
+    armature: bpy.types.Object,
+    mesh: bpy.types.Object,
+    arm_angle_deg: float = 45.0,
+    leg_angle_deg: float = 6.0,
+) -> dict:
+    """Swing the arms out to ~45° and spread the legs slightly, then bake that
+    as the new REST pose (mesh geometry follows, skinning stays intact).
+
+    Marketplace validation only accepts I/A/T poses (arms within -100..30° of
+    horizontal; legs near vertical), and Avatar Auto-Setup wants "an upright
+    A-pose or T-Pose" with limbs not overlapping from the front — an A-pose
+    satisfies both. Must run while the mesh is still ONE object with a live
+    Armature modifier (i.e. between attach_armature and split_mesh_by_bone).
+    """
+    import math
+    log: dict = {"before": {
+        "left_arm_deg": round(_angle_from_down(armature, "LeftUpperArm", "LeftHand"), 1),
+        "right_arm_deg": round(_angle_from_down(armature, "RightUpperArm", "RightHand"), 1),
+    }}
+
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode="POSE")
+    _rotate_pose_bone_world(armature, "LeftUpperArm", math.radians(arm_angle_deg))
+    _rotate_pose_bone_world(armature, "RightUpperArm", -math.radians(arm_angle_deg))
+    _rotate_pose_bone_world(armature, "LeftUpperLeg", math.radians(leg_angle_deg))
+    _rotate_pose_bone_world(armature, "RightUpperLeg", -math.radians(leg_angle_deg))
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    # Bake the posed deformation into the mesh while KEEPING skinning: duplicate
+    # the armature modifier, apply the original (freezes the current pose into
+    # the verts), keep the copy bound to the armature.
+    bpy.ops.object.select_all(action="DESELECT")
+    mesh.select_set(True)
+    bpy.context.view_layer.objects.active = mesh
+    arm_mod = next(m for m in mesh.modifiers if m.type == "ARMATURE")
+    keep = mesh.modifiers.new(name="rc_armature_keep", type="ARMATURE")
+    keep.object = arm_mod.object
+    bpy.ops.object.modifier_apply(modifier=arm_mod.name)
+
+    # Make the current pose the new rest pose; the kept modifier now evaluates
+    # to zero additional deformation against it.
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode="POSE")
+    bpy.ops.pose.armature_apply(selected=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    log["after"] = {
+        "left_arm_deg": round(_angle_from_down(armature, "LeftUpperArm", "LeftHand"), 1),
+        "right_arm_deg": round(_angle_from_down(armature, "RightUpperArm", "RightHand"), 1),
+        "left_leg_deg": round(_angle_from_down(armature, "LeftUpperLeg", "LeftFoot"), 1),
+        "right_leg_deg": round(_angle_from_down(armature, "RightUpperLeg", "RightFoot"), 1),
+    }
+    return log
+
+
 # --- step 4: split mesh by dominant bone weight ---------------------------
 
 def split_mesh_by_bone(
@@ -358,6 +446,49 @@ def split_mesh_by_bone(
                 best_w = g.weight
                 best_name = name
         dominant[v_idx] = best_name
+
+    # Re-bucket hip-band fabric so each LEG part fits its bbox cap. On wide
+    # organic bodies (onesies, skirts) the proximity weights pull side-belly
+    # fabric into the legs, blowing the Leg X<=1.5 cap and making the body
+    # scale-INFEASIBLE (Studio: "no valid scale passes ..."). Bucketing those
+    # same faces as LowerTorso keeps the silhouette pixel-identical while every
+    # part's bbox fits — parts are buckets, not geometry edits.
+    mesh_world = mesh.matrix_world
+    hip_z = {s: (r15_mod.bone_world_position(armature, f"{s}UpperLeg", "head")).z
+             for s in ("Left", "Right")}
+    wx = [0.0] * vertex_count
+    wz = [0.0] * vertex_count
+    z_lo = z_hi = None
+    for v_idx, v in enumerate(mesh.data.vertices):
+        w = mesh_world @ v.co
+        wx[v_idx], wz[v_idx] = w.x, w.z
+        z_lo = w.z if z_lo is None else min(z_lo, w.z)
+        z_hi = w.z if z_hi is None else max(z_hi, w.z)
+    rebucketed = 0
+    for v_idx, name in enumerate(dominant):
+        if "Leg" in name or name.endswith("Foot"):
+            side = "Left" if name.startswith("Left") else "Right"
+            if wz[v_idx] > hip_z[side]:
+                dominant[v_idx] = "LowerTorso"
+                rebucketed += 1
+    # Backstop: the feasibility condition Leg * scale <= cap with scale >=
+    # 3.6/total_height bounds each leg axis at (cap/3.6) * total_height. The
+    # 0.85 margin absorbs boundary-face majority-vote slop AND post-split
+    # decimation dragging border verts outward (measured ~0.3 studs combined).
+    total_h = (z_hi - z_lo) or 1.0
+    leg_x_cap = (1.5 / 3.6) * total_h * 0.80          # Leg X max 1.5
+    leg_y_half_cap = (2.0 / 3.6) * total_h * 0.80 / 2  # Leg Z (depth) max 2.0
+    wy = [0.0] * vertex_count
+    for v_idx, v in enumerate(mesh.data.vertices):
+        wy[v_idx] = (mesh_world @ v.co).y
+    for v_idx, name in enumerate(dominant):
+        if "Leg" in name or name.endswith("Foot"):
+            if abs(wx[v_idx]) > leg_x_cap or abs(wy[v_idx]) > leg_y_half_cap:
+                dominant[v_idx] = "LowerTorso"
+                rebucketed += 1
+    if rebucketed:
+        print(f"[split] re-bucketed {rebucketed} leg-band verts -> LowerTorso "
+              f"(leg X cap {leg_x_cap:.2f}, depth half-cap {leg_y_half_cap:.2f})")
 
     # For each bone, build a vertex-index set; select those verts and separate.
     by_bone: dict[str, list[int]] = {b: [] for b in bone_names}
@@ -760,6 +891,7 @@ def run_inplace(
     target_height: float = 5.0,
     decimate: bool = True,
     generate_cages: bool = True,
+    a_pose: bool = True,
     out_fbx: str | None = None,
     texture_prompt: str | None = None,
     texture_source_image: str | None = None,
@@ -788,6 +920,11 @@ def run_inplace(
     log["armature"] = armature.name
     log["template_width_fit"] = width_fit
     log["weights_per_bone"] = weight_hist
+    # A-pose BEFORE splitting (needs the single mesh + live armature modifier):
+    # marketplace validation only accepts I/A/T poses and Avatar Auto-Setup
+    # wants an A/T pose with limbs clear of the torso from the front.
+    if a_pose:
+        log["a_pose"] = pose_to_a_pose(armature, mesh)
     pieces = split_mesh_by_bone(mesh, armature)
     # Trim legs to one side of the midline + drop stray shards BEFORE decimation
     # so the tri budget rebalances over the kept geometry (fixes leg X>1.5 cap,
