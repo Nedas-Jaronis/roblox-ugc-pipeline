@@ -810,6 +810,9 @@ def generate_outer_cages(
         cage = bpy.context.view_layer.objects.active
         cage.name = spec.outer_cage_name(bone)
         cage.data.name = cage.name
+        # Cages are invisible wrap surfaces — Roblox ignores materials on
+        # CageWrap instances and prints a warning per cage if any are present.
+        cage.data.materials.clear()
         found = False
         for mod in cage.modifiers:
             if mod.type == "ARMATURE":
