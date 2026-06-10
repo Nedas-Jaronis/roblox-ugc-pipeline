@@ -71,10 +71,15 @@ _BODY_ATTACHMENTS: tuple[tuple[str, str, tuple[float, float, float]], ...] = (
     ("Neck_Att",                "UpperTorso",(0.0, 0.0, 1.0)),
     ("BodyFront_Att",           "UpperTorso",(0.0, -0.5, 0.5)),
     ("BodyBack_Att",            "UpperTorso",(0.0, 0.5, 0.5)),
-    ("LeftShoulder_Att",        "UpperTorso",(-1.0, 0.0, 0.9)),
-    ("RightShoulder_Att",       "UpperTorso",(1.0, 0.0, 0.9)),
-    ("LeftShoulderRig_Att",     "UpperTorso",(-1.0, 0.0, 0.9)),
-    ("RightShoulderRig_Att",    "UpperTorso",(1.0, 0.0, 0.9)),
+    # Shoulder/hip markers anchor to the FITTED limb bones (offset 0), not
+    # template-fixed X offsets: Studio derives the limb pose angle from the
+    # shoulder->grip / hip->foot attachment vectors, and a shoulder stamped
+    # 1.0 studs out while the fitted arm sits at ±0.4 reads as a bent arm
+    # (-155 deg "must be I/A/T pose") no matter what the mesh looks like.
+    ("LeftShoulder_Att",        "LeftUpperArm", (0.0, 0.0, 0.0)),
+    ("RightShoulder_Att",       "RightUpperArm",(0.0, 0.0, 0.0)),
+    ("LeftShoulderRig_Att",     "LeftUpperArm", (0.0, 0.0, 0.0)),
+    ("RightShoulderRig_Att",    "RightUpperArm",(0.0, 0.0, 0.0)),
     ("WaistRig_Att",            "UpperTorso",(0.0, 0.0, 0.0)),
 
     # LowerTorso (head 0,0,2.4 ; tail 0,0,3.0).
@@ -82,8 +87,8 @@ _BODY_ATTACHMENTS: tuple[tuple[str, str, tuple[float, float, float]], ...] = (
     ("WaistFront_Att",          "LowerTorso",(0.0, -0.4, 0.4)),
     ("WaistBack_Att",           "LowerTorso",(0.0, 0.4, 0.4)),
     ("WaistCenter_Att",         "LowerTorso",(0.0, 0.0, 0.4)),
-    ("LeftHipRig_Att",          "LowerTorso",(-0.5, 0.0, 0.0)),
-    ("RightHipRig_Att",         "LowerTorso",(0.5, 0.0, 0.0)),
+    ("LeftHipRig_Att",          "LeftUpperLeg", (0.0, 0.0, 0.0)),
+    ("RightHipRig_Att",         "RightUpperLeg",(0.0, 0.0, 0.0)),
 
     # Hands.
     ("LeftGrip_Att",            "LeftHand",  (0.0, 0.0, 0.0)),
@@ -896,7 +901,11 @@ def run_inplace(
     target_height: float = 5.0,
     decimate: bool = True,
     generate_cages: bool = True,
-    a_pose: bool = True,
+    # OFF by default: arms-down IS a valid I-pose (the "must be I/A/T pose"
+    # readings came from mis-anchored shoulder attachments, since fixed), and
+    # posing deforms organic bodies visibly (dragged side fabric). Enable only
+    # for clean humanoids that need Avatar Auto-Setup's preferred A-pose.
+    a_pose: bool = False,
     out_fbx: str | None = None,
     texture_prompt: str | None = None,
     texture_source_image: str | None = None,
