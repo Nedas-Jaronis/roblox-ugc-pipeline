@@ -509,6 +509,27 @@ def split_mesh_by_bone(
         print(f"[split] re-bucketed {rebucketed} leg-band verts -> LowerTorso "
               f"(leg X cap {leg_x_cap:.2f}, depth half-cap {leg_y_half_cap:.2f})")
 
+    # Re-bucket above-shoulder geometry out of the ARM parts. Antennae, stems,
+    # hair and hat geometry near a raised silhouette edge weight-bleeds into
+    # the arm chain; rigid-bound to the arm bone it then animates WITH the arm
+    # in-game (floating chunks dragging on wave) and inflates the arm-asset
+    # bbox (Studio: "low visibility geometry increases RightArm bounding box
+    # size by N%"). Anything an arm bucket claims above the shoulder joint
+    # (+5% body-height slack) belongs to the torso/head column instead.
+    shoulder_z = {s: (r15_mod.bone_world_position(armature, f"{s}UpperArm", "head")).z
+                  for s in ("Left", "Right")}
+    head_z = r15_mod.bone_world_position(armature, "Head", "head").z
+    arm_rebucketed = 0
+    for v_idx, name in enumerate(dominant):
+        if "Arm" in name or name.endswith("Hand"):
+            side = "Left" if name.startswith("Left") else "Right"
+            if wz[v_idx] > shoulder_z[side] + 0.05 * total_h:
+                dominant[v_idx] = "Head" if wz[v_idx] > head_z else "UpperTorso"
+                arm_rebucketed += 1
+    if arm_rebucketed:
+        print(f"[split] re-bucketed {arm_rebucketed} above-shoulder verts out of "
+              f"arm buckets (shoulder z {shoulder_z['Left']:.2f}/{shoulder_z['Right']:.2f})")
+
     # For each bone, build a vertex-index set; select those verts and separate.
     by_bone: dict[str, list[int]] = {b: [] for b in bone_names}
     for v_idx, name in enumerate(dominant):
