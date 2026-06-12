@@ -194,6 +194,31 @@ UGC_ASSET_SIZE_BOUNDS: dict[str, dict[str, tuple[Vec3, Vec3]]] = {
 }
 
 
+# validatePose.lua (FInt defaults): limb direction = top rig attachment ->
+# bottom rig attachment, projected onto the world XY (frontal) plane.
+# Out-of-plane: angle between the limb and its frontal projection.
+# In-plane: signed angle from the outward X axis (+X right limbs, -X left),
+# 0 = horizontal T-pose, -90 = straight down I-pose, positive = above
+# horizontal. I/A/T poses all fall inside these windows by design.
+POSE_OUT_OF_PLANE_MAX_DEG: float = 20.0
+POSE_IN_PLANE_RANGE_DEG: dict[str, tuple[float, float]] = {
+    "Arm": (-90.0, 30.0),
+    "Leg": (-93.0, -60.0),
+}
+
+# validateBodyPartExtentsRelativeToParent.lua: within an asset, a lower part
+# may not extend above its upper part's bbox top, and the upper part may not
+# extend below the lower part's bbox bottom (strict, no tolerance). Pairs are
+# (upper, lower); UpperTorso counts as "upper" relative to LowerTorso.
+EXTENTS_UPPER_LOWER_PAIRS: tuple[tuple[str, str], ...] = (
+    ("UpperTorso", "LowerTorso"),
+    ("LeftUpperArm", "LeftLowerArm"), ("LeftLowerArm", "LeftHand"),
+    ("RightUpperArm", "RightLowerArm"), ("RightLowerArm", "RightHand"),
+    ("LeftUpperLeg", "LeftLowerLeg"), ("LeftLowerLeg", "LeftFoot"),
+    ("RightUpperLeg", "RightLowerLeg"), ("RightLowerLeg", "RightFoot"),
+)
+
+
 def att_to_roblox_name(name: str) -> str:
     """Map this repo's `*_Att` naming to the engine attachment name.
 

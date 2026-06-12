@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ..report import MeshReport, ValidationResult
 from . import (
+    assembly,
     attachment_bounds,
     attachments,
     bounds,
@@ -20,6 +21,7 @@ def validate_avatar(report: MeshReport) -> ValidationResult:
     findings += rig.check_avatar(report)
     findings += attachments.check_avatar(report)
     findings += attachment_bounds.check_avatar(report)
+    findings += assembly.check_avatar(report)
     findings += materials.check(report)
     return ValidationResult(target="avatar", findings=findings)
 

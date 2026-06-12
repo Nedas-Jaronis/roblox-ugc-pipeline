@@ -107,6 +107,8 @@ src/roblox_ugc_pipeline/
                         # BOTH parts that share it (rig joints)
     scale_feasibility.py # "No valid scale" check vs creator-docs AND
                         # UGCValidation-mirror bounds tables
+    assembly.py         # Limb pose windows (validatePose), upper/lower part
+                        # extent ordering, leg-overlap check
     materials.py        # PBR maps + 2048 texture-size cap (uses Pillow if avail)
     registry.py
   blender/              # Run inside `blender --background`

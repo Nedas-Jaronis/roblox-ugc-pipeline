@@ -559,22 +559,18 @@ def split_mesh_by_bone(
         bpy.ops.mesh.delete_loose()
         bpy.ops.object.mode_set(mode="OBJECT")
 
-        # Re-origin the piece to its bone JOINT. Each piece is a DUPLICATE of the
-        # whole mesh with other bones' faces deleted, so it keeps the source
-        # pivot at world (0,0,0) while this part's geometry sits several studs
-        # away. Roblox derives each MeshPart's ImportOrigin (and the cage's
-        # CageOrigin) from that pivot->geometry offset and rejects PositionMagnitude
-        # > 8 / > 10 — one warning per part. Snapping the origin to the bone head
-        # collapses that offset to ~0. origin_set preserves WORLD vertex positions,
-        # so the armature modifier + skin weights are unaffected.
-        head_world = r15_mod.bone_world_position(armature, bone, "head")
-        _prev_cursor = tuple(bpy.context.scene.cursor.location)
-        bpy.context.scene.cursor.location = head_world
+        # Re-origin the piece to its mesh-bbox CENTER. The upload gate's
+        # validateMeshIsAtOrigin (validateDescendantMeshMetrics.lua) requires
+        # each part's mesh-space vertex-AABB center within 0.001 of the mesh
+        # origin — a joint or world pivot fails it by half a part-length.
+        # BBox-center pivots also keep ImportOrigin/CageOrigin
+        # PositionMagnitude (caps 8 / 10) at ~0. origin_set preserves WORLD
+        # vertex positions, so the armature modifier + skin weights are
+        # unaffected.
         bpy.ops.object.select_all(action="DESELECT")
         piece.select_set(True)
         bpy.context.view_layer.objects.active = piece
-        bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
-        bpy.context.scene.cursor.location = _prev_cursor
+        bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
 
         pieces[bone] = piece
 
@@ -657,7 +653,18 @@ def stamp_body_attachments(armature: bpy.types.Object) -> list[str]:
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = 0.1
         bpy.context.scene.collection.objects.link(empty)
-        empty.matrix_world = Matrix.Translation(world_pos)
+        # Grip attachments must be oriented, not identity: the gate
+        # (validateBodyPartChildAttachmentOrientations) expects Roblox-space
+        # rotX(-90 deg) for an I-pose arm; +90 deg about Blender X lands there
+        # after the FBX Y-up axis conversion. All other attachments must stay
+        # unrotated (rig attachments are checked against identity).
+        if "Grip" in att_name:
+            from math import radians
+            empty.matrix_world = (
+                Matrix.Translation(world_pos) @ Matrix.Rotation(radians(90.0), 4, "X")
+            )
+        else:
+            empty.matrix_world = Matrix.Translation(world_pos)
         stamped.append(att_name)
 
     bpy.context.view_layer.update()
@@ -1062,6 +1069,13 @@ def run_inplace(
         log["attachments_stamped"] = stamp_body_attachments(armature)
     if decimate:
         log["decimate"] = decimate_per_group(pieces)
+        # Decimation moves border verts, drifting the bbox center off the
+        # pivot; re-snap so validateMeshIsAtOrigin's 0.001 tolerance holds.
+        for piece in pieces.values():
+            bpy.ops.object.select_all(action="DESELECT")
+            piece.select_set(True)
+            bpy.context.view_layer.objects.active = piece
+            bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
     # Clamp AFTER decimation so the boxes derive from the final render-mesh
     # bounds (the same bounds the upload gate normalizes against).
     if stamp_attachments:
