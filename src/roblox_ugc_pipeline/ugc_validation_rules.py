@@ -194,17 +194,35 @@ UGC_ASSET_SIZE_BOUNDS: dict[str, dict[str, tuple[Vec3, Vec3]]] = {
 }
 
 
-# validatePose.lua (FInt defaults): limb direction = top rig attachment ->
-# bottom rig attachment, projected onto the world XY (frontal) plane.
+# validatePose.lua: limb direction = top rig attachment -> bottom rig
+# attachment, projected onto the world XY (frontal) plane.
 # Out-of-plane: angle between the limb and its frontal projection.
 # In-plane: signed angle from the outward X axis (+X right limbs, -X left),
 # 0 = horizontal T-pose, -90 = straight down I-pose, positive = above
 # horizontal. I/A/T poses all fall inside these windows by design.
+# Ranges below are the LIVE values read from Studio's validation output on
+# 2026-06-12 ("must be between -100 and 30" / "-105 and -60") — looser than
+# the 2024 FInt defaults (-90/+30 and -93/-60).
 POSE_OUT_OF_PLANE_MAX_DEG: float = 20.0
 POSE_IN_PLANE_RANGE_DEG: dict[str, tuple[float, float]] = {
-    "Arm": (-90.0, 30.0),
-    "Leg": (-93.0, -60.0),
+    "Arm": (-100.0, 30.0),
+    "Leg": (-105.0, -60.0),
 }
+
+# Live-gate observations from the same 2026-06-12 Studio validation run —
+# server-tuned thresholds for checks we can't fully replicate yet (no local
+# rasterizer/cage metrics). Recorded for a future raster validator and for
+# interpreting Studio output:
+#   - Opacity minima per orthographic view: legs 0.30 (front/back/left/right),
+#     arms 0.10 from top.
+#   - Low-visibility geometry: stray geometry may not grow a limb-asset bbox
+#     by more than ~20% (legs) / ~33.4% (arms) on Y.
+#   - Cage-to-mesh distance caps: 0.60 head, 0.30 other parts (studs).
+#   - Render-vs-cage mesh size difference cap: 1.00 (RenderVsWrapMeshMaxDiff).
+#   - Full-body assembled Z (depth) cap observed: 2.50 studs.
+#   - Hip rig attachment X clamp observed: |X| <= 0.45 on a ~1-stud-wide
+#     upper leg (ValidateLegsSeparation's Size.X * range rule).
+#   - Grip orientation tolerance: 30 deg from the arm-angle-corrected target.
 
 # validateBodyPartExtentsRelativeToParent.lua: within an asset, a lower part
 # may not extend above its upper part's bbox top, and the upper part may not
