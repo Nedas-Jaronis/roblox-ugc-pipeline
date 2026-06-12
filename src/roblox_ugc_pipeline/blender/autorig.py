@@ -15,7 +15,9 @@ Pipeline (`run_inplace`):
        on the right bones (Root_Att at world origin, Hat_Att on top of head,
        Grip_Atts on hands, etc.).
     7. Per-group decimation to the avatar tri budget (Head 4k, Torso group
-       1.75k, each arm/leg group 1.248k).
+       1.75k, each arm/leg group 1.248k), then clamp every attachment into
+       the legal per-part boxes Roblox's UGCValidation enforces
+       (see ugc_validation_rules.py) so placement passes by construction.
     8. Export-friendly FBX with Y-up axes.
 
 Single-pass — no iterative retopo, no inner cage generation. Designed to
@@ -89,6 +91,13 @@ _BODY_ATTACHMENTS: tuple[tuple[str, str, tuple[float, float, float]], ...] = (
     ("WaistCenter_Att",         "LowerTorso",(0.0, 0.0, 0.4)),
     ("LeftHipRig_Att",          "LeftUpperLeg", (0.0, 0.0, 0.0)),
     ("RightHipRig_Att",         "RightUpperLeg",(0.0, 0.0, 0.0)),
+
+    # Elbow/knee joints (bone head = the joint). The upload gate requires
+    # these in both the upper part (bottom region) and lower part (top region).
+    ("LeftElbowRig_Att",        "LeftLowerArm", (0.0, 0.0, 0.0)),
+    ("RightElbowRig_Att",       "RightLowerArm",(0.0, 0.0, 0.0)),
+    ("LeftKneeRig_Att",         "LeftLowerLeg", (0.0, 0.0, 0.0)),
+    ("RightKneeRig_Att",        "RightLowerLeg",(0.0, 0.0, 0.0)),
 
     # Hands.
     ("LeftGrip_Att",            "LeftHand",  (0.0, 0.0, 0.0)),
@@ -668,6 +677,100 @@ def stamp_body_attachments(armature: bpy.types.Object) -> list[str]:
     return stamped
 
 
+# --- step 6b: clamp attachments into the upload gate's legal boxes ---------
+
+def _ugc_rules():
+    import importlib
+    return importlib.import_module("roblox_ugc_pipeline.ugc_validation_rules")
+
+
+def clamp_attachments_to_ugc_bounds(pieces: dict[str, bpy.types.Object]) -> dict:
+    """Solve every stamped attachment into the per-part boxes Roblox's
+    UGCValidation enforces (validateBodyPartChildAttachmentBounds).
+
+    Each box is normalized mesh-space on a part's bbox; rig attachments are
+    constrained by TWO parts (child top + parent bottom), so the legal region
+    is the world-space intersection of the per-part AABBs. Boxes are
+    axis-aligned in Roblox space and our parts are axis-aligned in Blender
+    world, so the intersection is a simple per-axis interval clamp.
+    Root_Att stays pinned at the world origin (spec) — it is only checked.
+    """
+    from mathutils import Matrix  # type: ignore
+    rules = _ugc_rules()
+    eps = 1e-4
+    log: dict = {"moved": {}, "conflicts": [], "violations": []}
+
+    # Blender axis index -> Roblox axis index ((x,y,z)_b = (X,Z,Y)_r).
+    rbx_axis_for_blender = (0, 2, 1)
+
+    for att_name, _bone, _offset in _BODY_ATTACHMENTS:
+        empty = bpy.data.objects.get(att_name)
+        if empty is None:
+            continue
+        roblox_name = rules.att_to_roblox_name(att_name)
+        constraints = rules.ATTACHMENT_CONSTRAINTS.get(roblox_name)
+        if not constraints:
+            continue
+
+        # Per Blender axis: tightest world-space [lo, hi] over all part boxes.
+        lo = [float("-inf")] * 3
+        hi = [float("inf")] * 3
+        binding: list[str] = []
+        for part, box in constraints:
+            piece = pieces.get(part)
+            if piece is None:
+                continue
+            bb_min, bb_max = _world_bbox(piece)
+            binding.append(part)
+            for b_axis in range(3):
+                r_axis = rbx_axis_for_blender[b_axis]
+                c = (bb_min[b_axis] + bb_max[b_axis]) / 2
+                h = (bb_max[b_axis] - bb_min[b_axis]) / 2
+                if h <= 1e-9:
+                    continue
+                lo[b_axis] = max(lo[b_axis], c + box[0][r_axis] * h)
+                hi[b_axis] = min(hi[b_axis], c + box[1][r_axis] * h)
+        if not binding:
+            continue
+
+        pos = empty.matrix_world.translation.copy()
+        target = pos.copy()
+        conflict = False
+        for b_axis in range(3):
+            a_lo, a_hi = lo[b_axis], hi[b_axis]
+            if a_lo > a_hi:
+                # Child and parent boxes don't overlap on this axis — the
+                # parts themselves are mis-proportioned. Aim for the midpoint
+                # so both violations are minimal, and surface it in the log.
+                conflict = True
+                target[b_axis] = (a_lo + a_hi) / 2
+            else:
+                target[b_axis] = min(max(pos[b_axis], a_lo + eps), a_hi - eps)
+        if conflict:
+            log["conflicts"].append(
+                f"{att_name}: no world position satisfies all of {binding}"
+            )
+
+        if att_name == "Root_Att":
+            if (target - pos).length > eps:
+                log["violations"].append(
+                    "Root_Att must stay at origin but origin is outside "
+                    f"LowerTorso's legal box (wanted {tuple(round(v, 3) for v in target)})"
+                )
+            continue
+        if (target - pos).length > eps:
+            empty.matrix_world = (
+                Matrix.Translation(target) @ empty.matrix_world.to_3x3().to_4x4()
+            )
+            log["moved"][att_name] = {
+                "from": tuple(round(v, 3) for v in pos),
+                "to": tuple(round(v, 3) for v in target),
+                "parts": binding,
+            }
+    bpy.context.view_layer.update()
+    return log
+
+
 # --- step 7: per-group decimation -----------------------------------------
 
 def decimate_per_group(pieces: dict[str, bpy.types.Object]) -> dict:
@@ -959,6 +1062,10 @@ def run_inplace(
         log["attachments_stamped"] = stamp_body_attachments(armature)
     if decimate:
         log["decimate"] = decimate_per_group(pieces)
+    # Clamp AFTER decimation so the boxes derive from the final render-mesh
+    # bounds (the same bounds the upload gate normalizes against).
+    if stamp_attachments:
+        log["attachment_clamp"] = clamp_attachments_to_ugc_bounds(pieces)
     # Generate per-part WrapTarget cages AFTER decimation so each cage hugs the
     # final render mesh (clears the ~25 *WrapTarget origin/distance/size warnings).
     if generate_cages:

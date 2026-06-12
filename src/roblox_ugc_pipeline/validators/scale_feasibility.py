@@ -20,8 +20,20 @@ from ..report import Finding, MeshReport
 from ..roblox_spec import (
     BODY_GROUP_MEMBERS,
     BODY_SCALE_BOUNDS,
+    PartScaleBounds,
     SCALE_GROUP_FOR_BODY_GROUP,
 )
+from ..ugc_validation_rules import UGC_ASSET_SIZE_BOUNDS
+
+# Second rule set: the bounds Roblox's own UGCValidation module enforced
+# (vendored from the Client-Tracker mirror). Differs from the creator-docs
+# table in places (e.g. Torso Classic max 3.5x3.25 vs docs 4.0x3.8); a body
+# feasible under BOTH sets is safe regardless of which the live gate uses.
+# No "Total" row — the mirror checks per-asset bounds only.
+_MIRROR_BOUNDS: dict[str, dict[str, PartScaleBounds]] = {
+    body_type: {part: PartScaleBounds(mn, mx) for part, (mn, mx) in parts.items()}
+    for body_type, parts in UGC_ASSET_SIZE_BOUNDS.items()
+}
 
 _EPS = 1e-9
 
@@ -64,6 +76,7 @@ def _group_sizes_studs(report: MeshReport) -> dict[str, tuple[float, float, floa
 
 def feasible_scale_range(
     report: MeshReport, body_type: str,
+    bounds_table: dict[str, dict[str, PartScaleBounds]] = BODY_SCALE_BOUNDS,
 ) -> tuple[float, float, str, str] | None:
     """Return (lo, hi, lo_binder, hi_binder) for this body type, or None if
     the report has no recognizable body groups. lo > hi means infeasible;
@@ -71,12 +84,14 @@ def feasible_scale_range(
     sizes = _group_sizes_studs(report)
     if not sizes:
         return None
-    bounds = BODY_SCALE_BOUNDS[body_type]
+    bounds = bounds_table[body_type]
     lo, hi = 0.0, float("inf")
     lo_binder, hi_binder = "", ""
     for group, size in sizes.items():
         spec_key = "Total" if group == "Total" else SCALE_GROUP_FOR_BODY_GROUP[group]
-        b = bounds[spec_key]
+        b = bounds.get(spec_key)
+        if b is None:
+            continue
         for axis in range(3):
             if size[axis] <= _EPS:
                 continue
@@ -102,43 +117,51 @@ def check_avatar(report: MeshReport) -> list[Finding]:
         ))
         return out
 
-    feasible: dict[str, tuple[float, float]] = {}
-    tightest: tuple[float, str, str] | None = None  # (gap, lo_binder, hi_binder)
-    for body_type in BODY_SCALE_BOUNDS:
-        rng = feasible_scale_range(report, body_type)
-        if rng is None:
-            continue
-        lo, hi, lo_b, hi_b = rng
-        if lo <= hi:
-            feasible[body_type] = (lo, hi)
-        else:
-            gap = lo / hi
-            if tightest is None or gap < tightest[0]:
-                tightest = (gap, lo_b, hi_b)
+    for validator_name, table, label in (
+        ("scale.feasibility", BODY_SCALE_BOUNDS, "creator-docs bounds"),
+        ("scale.feasibility.ugc", _MIRROR_BOUNDS, "UGCValidation-mirror bounds"),
+    ):
+        feasible: dict[str, tuple[float, float]] = {}
+        tightest: tuple[float, str, str] | None = None  # (gap, lo_binder, hi_binder)
+        for body_type in table:
+            rng = feasible_scale_range(report, body_type, table)
+            if rng is None:
+                continue
+            lo, hi, lo_b, hi_b = rng
+            if lo <= hi:
+                feasible[body_type] = (lo, hi)
+            else:
+                gap = lo / hi
+                if tightest is None or gap < tightest[0]:
+                    tightest = (gap, lo_b, hi_b)
 
-    if feasible:
-        ranges = ", ".join(f"{bt} x[{lo:.2f}, {hi:.2f}]" for bt, (lo, hi) in feasible.items())
-        out.append(Finding(
-            validator="scale.feasibility",
-            severity="info",
-            message=f"A valid marketplace scale EXISTS — feasible uniform-scale ranges: {ranges}",
-            remediation=None,
-        ))
-    else:
-        gap, lo_b, hi_b = tightest  # type: ignore[misc]
-        out.append(Finding(
-            validator="scale.feasibility",
-            severity="error",
-            message=(
-                "No uniform scale fits every body part in its min/max range "
-                "(Studio: 'no valid scale passes individual body part requirements'). "
-                f"Binding conflict: scale must be >= {lo_b} but <= {hi_b} "
-                f"— proportions are off by a factor of {gap:.2f}."
-            ),
-            remediation=(
-                "Fix PROPORTIONS, not overall size: shrink the part forcing the "
-                "lower bound or grow the part forcing the upper bound until the "
-                "ranges overlap."
-            ),
-        ))
+        if feasible:
+            ranges = ", ".join(f"{bt} x[{lo:.2f}, {hi:.2f}]" for bt, (lo, hi) in feasible.items())
+            out.append(Finding(
+                validator=validator_name,
+                severity="info",
+                message=(
+                    f"A valid marketplace scale EXISTS under {label} — "
+                    f"feasible uniform-scale ranges: {ranges}"
+                ),
+                remediation=None,
+            ))
+        else:
+            gap, lo_b, hi_b = tightest  # type: ignore[misc]
+            out.append(Finding(
+                validator=validator_name,
+                severity="error",
+                message=(
+                    f"No uniform scale fits every body part in its min/max range "
+                    f"under {label} "
+                    "(Studio: 'no valid scale passes individual body part requirements'). "
+                    f"Binding conflict: scale must be >= {lo_b} but <= {hi_b} "
+                    f"— proportions are off by a factor of {gap:.2f}."
+                ),
+                remediation=(
+                    "Fix PROPORTIONS, not overall size: shrink the part forcing the "
+                    "lower bound or grow the part forcing the upper bound until the "
+                    "ranges overlap."
+                ),
+            ))
     return out

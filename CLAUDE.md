@@ -89,6 +89,12 @@ src/roblox_ugc_pipeline/
   roblox_spec.py        # OFFICIAL spec values from creator-docs (R15 bones,
                         # *_Geo mesh names, group tri budgets, accessory bounds,
                         # attachments, 2048 texture cap, max 4 bone influences)
+  ugc_validation_rules.py # Roblox's OWN upload-gate rules, vendored from the
+                        # Client-Tracker mirror of the UGCValidation Luau module
+                        # (commit f56a1b632e): per-part attachment boxes in
+                        # normalized mesh-space + per-asset size bounds. The
+                        # autorig clamps attachments into these boxes so
+                        # placement passes by construction.
   report.py             # MeshReport, ValidationResult, Finding
   validators/           # Pure-python validators
     polycount.py        # Group-level avatar tri budgets + accessory caps
@@ -96,6 +102,11 @@ src/roblox_ugc_pipeline/
     rig.py              # R15 bone presence/naming, accessory rigid check
     attachments.py      # Required attachments (handles tuple-of-names case,
                         # checks Root_Att is at origin)
+    attachment_bounds.py # Port of validateBodyPartChildAttachmentBounds —
+                        # checks every attachment against its legal box on
+                        # BOTH parts that share it (rig joints)
+    scale_feasibility.py # "No valid scale" check vs creator-docs AND
+                        # UGCValidation-mirror bounds tables
     materials.py        # PBR maps + 2048 texture-size cap (uses Pillow if avail)
     registry.py
   blender/              # Run inside `blender --background`
