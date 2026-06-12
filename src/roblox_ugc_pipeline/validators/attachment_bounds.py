@@ -26,6 +26,10 @@ _DOCS_COVERED: frozenset[str] = frozenset(
     att_to_roblox_name(a) for atts in ATTACHMENTS_BY_BONE.values() for a in atts
 )
 
+# Studio's importer creates these itself (RootRigAttachment is placed at hip
+# height from the rig, not from an FBX marker) — absence in the FBX is fine.
+_IMPORTER_DERIVED: frozenset[str] = frozenset({"RootRigAttachment"})
+
 
 def check_avatar(report: MeshReport) -> list[Finding]:
     out: list[Finding] = []
@@ -41,7 +45,7 @@ def check_avatar(report: MeshReport) -> list[Finding]:
         for att_name, box in rules.items():
             att = atts_by_roblox_name.get(att_name)
             if att is None:
-                if att_name not in _DOCS_COVERED:
+                if att_name not in _DOCS_COVERED and att_name not in _IMPORTER_DERIVED:
                     out.append(Finding(
                         validator="attachments.bounds",
                         severity="error",

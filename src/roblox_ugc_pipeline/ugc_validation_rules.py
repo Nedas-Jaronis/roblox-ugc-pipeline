@@ -222,8 +222,11 @@ EXTENTS_UPPER_LOWER_PAIRS: tuple[tuple[str, str], ...] = (
 def att_to_roblox_name(name: str) -> str:
     """Map this repo's `*_Att` naming to the engine attachment name.
 
-    Root_Att is the one irregular case: the engine calls it RootRigAttachment.
-    Names already in engine form pass through unchanged.
+    Root_Att deliberately does NOT map to RootRigAttachment: Root_Att is the
+    FBX ground/origin marker (pinned at world origin, between the feet), while
+    the LowerTorso's RootRigAttachment is derived by Studio's importer at hip
+    height — validating or clamping Root_Att against the RootRigAttachment box
+    produces false failures. Names already in engine form pass through.
     """
     if name.endswith("Attachment"):
         return name
@@ -231,7 +234,7 @@ def att_to_roblox_name(name: str) -> str:
         return name
     stem = name[: -len("_Att")]
     if stem == "Root":
-        return "RootRigAttachment"
+        return name
     return f"{stem}Attachment"
 
 

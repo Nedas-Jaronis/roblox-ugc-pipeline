@@ -700,12 +700,13 @@ def clamp_attachments_to_ugc_bounds(pieces: dict[str, bpy.types.Object]) -> dict
     is the world-space intersection of the per-part AABBs. Boxes are
     axis-aligned in Roblox space and our parts are axis-aligned in Blender
     world, so the intersection is a simple per-axis interval clamp.
-    Root_Att stays pinned at the world origin (spec) — it is only checked.
+    Root_Att is exempt: it's the FBX ground/origin marker, and Studio derives
+    the LowerTorso RootRigAttachment itself at hip height.
     """
     from mathutils import Matrix  # type: ignore
     rules = _ugc_rules()
     eps = 1e-4
-    log: dict = {"moved": {}, "conflicts": [], "violations": []}
+    log: dict = {"moved": {}, "conflicts": []}
 
     # Blender axis index -> Roblox axis index ((x,y,z)_b = (X,Z,Y)_r).
     rbx_axis_for_blender = (0, 2, 1)
@@ -735,8 +736,12 @@ def clamp_attachments_to_ugc_bounds(pieces: dict[str, bpy.types.Object]) -> dict
                 h = (bb_max[b_axis] - bb_min[b_axis]) / 2
                 if h <= 1e-9:
                     continue
-                lo[b_axis] = max(lo[b_axis], c + box[0][r_axis] * h)
-                hi[b_axis] = min(hi[b_axis], c + box[1][r_axis] * h)
+                # 2%-of-half-size inset absorbs FBX round-trip bbox drift
+                # (decimation/export quantization moved verts ~0.03 normalized
+                # in testing, which put boundary clamps back outside the box).
+                m = 0.02 * h
+                lo[b_axis] = max(lo[b_axis], c + box[0][r_axis] * h + m)
+                hi[b_axis] = min(hi[b_axis], c + box[1][r_axis] * h - m)
         if not binding:
             continue
 
@@ -758,13 +763,6 @@ def clamp_attachments_to_ugc_bounds(pieces: dict[str, bpy.types.Object]) -> dict
                 f"{att_name}: no world position satisfies all of {binding}"
             )
 
-        if att_name == "Root_Att":
-            if (target - pos).length > eps:
-                log["violations"].append(
-                    "Root_Att must stay at origin but origin is outside "
-                    f"LowerTorso's legal box (wanted {tuple(round(v, 3) for v in target)})"
-                )
-            continue
         if (target - pos).length > eps:
             empty.matrix_world = (
                 Matrix.Translation(target) @ empty.matrix_world.to_3x3().to_4x4()
@@ -799,18 +797,24 @@ def decimate_per_group(pieces: dict[str, bpy.types.Object]) -> dict:
         if total_tris <= budget:
             log[group_name]["after"] = total_tris
             continue
-        ratio = max(0.01, budget / total_tris)
-        for o in objs:
-            mod = o.modifiers.new(name="rc_decimate", type="DECIMATE")
-            mod.decimate_type = "COLLAPSE"
-            mod.ratio = ratio
-            bpy.ops.object.select_all(action="DESELECT")
-            o.select_set(True)
-            bpy.context.view_layer.objects.active = o
-            bpy.ops.object.modifier_apply(modifier=mod.name)
-        after = sum(_count_tris(o) for o in objs)
-        log[group_name]["after"] = after
-        log[group_name]["ratio"] = round(ratio, 4)
+        # Collapse-decimate gets unreliable below ~1% per pass, so very dense
+        # sources (300k-tri groups) need several passes to actually reach the
+        # budget instead of stalling at the ratio floor.
+        passes = 0
+        while total_tris > budget and passes < 5:
+            ratio = max(0.01, budget / total_tris)
+            for o in objs:
+                mod = o.modifiers.new(name="rc_decimate", type="DECIMATE")
+                mod.decimate_type = "COLLAPSE"
+                mod.ratio = ratio
+                bpy.ops.object.select_all(action="DESELECT")
+                o.select_set(True)
+                bpy.context.view_layer.objects.active = o
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+            total_tris = sum(_count_tris(o) for o in objs)
+            passes += 1
+        log[group_name]["after"] = total_tris
+        log[group_name]["passes"] = passes
     return log
 
 
