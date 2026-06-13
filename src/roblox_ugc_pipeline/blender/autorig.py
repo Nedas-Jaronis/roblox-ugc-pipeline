@@ -861,10 +861,16 @@ _BONE_GROUP: dict[str, str] = {
 }
 
 
-def _keep_largest_component(piece: bpy.types.Object) -> int:
+def _keep_largest_component(piece: bpy.types.Object) -> tuple[bpy.types.Object, int]:
     """Drop all but the largest connected component of a piece (kills the stray
     far-away shards that inflate the part bbox -> 'low visibility geometry' +
-    'not opaque enough', since opacity is fill-fraction RELATIVE to the bbox)."""
+    'not opaque enough', since opacity is fill-fraction RELATIVE to the bbox).
+
+    Returns the SURVIVING object: separate(LOOSE) may leave the largest
+    component in a freshly created object rather than `piece` itself, in
+    which case `piece` gets removed here and any held reference goes stale
+    (ReferenceError downstream).
+    """
     bpy.ops.object.select_all(action="DESELECT")
     piece.select_set(True)
     bpy.context.view_layer.objects.active = piece
@@ -872,12 +878,17 @@ def _keep_largest_component(piece: bpy.types.Object) -> int:
     bpy.ops.mesh.separate(type="LOOSE")
     parts = [o for o in bpy.context.selected_objects if o.type == "MESH"]
     if len(parts) <= 1:
-        return 0
+        return piece, 0
     parts.sort(key=lambda o: len(o.data.polygons), reverse=True)
+    keep = parts[0]
     dropped = len(parts) - 1
+    name, data_name = piece.name, piece.data.name
     for o in parts[1:]:
         bpy.data.objects.remove(o, do_unlink=True)
-    return dropped
+    if keep.name != name:
+        keep.name = name
+        keep.data.name = data_name
+    return keep, dropped
 
 
 def clamp_pieces_to_spec_bounds(pieces: dict[str, bpy.types.Object]) -> dict:
@@ -913,7 +924,8 @@ def clamp_pieces_to_spec_bounds(pieces: dict[str, bpy.types.Object]) -> dict:
         bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.mesh.delete_loose()
         bpy.ops.object.mode_set(mode="OBJECT")
-        dropped = _keep_largest_component(piece)
+        piece, dropped = _keep_largest_component(piece)
+        pieces[bone] = piece
         log[bone] = {"trimmed_faces": deleted, "dropped_components": dropped}
     return log
 
