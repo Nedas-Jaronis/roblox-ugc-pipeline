@@ -757,10 +757,11 @@ def clamp_attachments_to_ugc_bounds(pieces: dict[str, bpy.types.Object]) -> dict
                 h = (bb_max[b_axis] - bb_min[b_axis]) / 2
                 if h <= 1e-9:
                     continue
-                # 2%-of-half-size inset absorbs FBX round-trip bbox drift
-                # (decimation/export quantization moved verts ~0.03 normalized
-                # in testing, which put boundary clamps back outside the box).
-                m = 0.02 * h
+                # Inset absorbs FBX round-trip bbox drift. Proportional alone
+                # is not enough for SMALL parts: a foot is ~0.15 studs tall,
+                # so 0.01 studs of export/import drift is ~0.07 normalized —
+                # hence the absolute floor on top of the 5%.
+                m = 0.05 * h + 0.01
                 lo[b_axis] = max(lo[b_axis], c + box[0][r_axis] * h + m)
                 hi[b_axis] = min(hi[b_axis], c + box[1][r_axis] * h - m)
         if not binding:

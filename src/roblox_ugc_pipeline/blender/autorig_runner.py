@@ -70,8 +70,11 @@ def _clear_scene() -> None:
 
 
 def _join_into_single_mesh(prefix: str | None = None) -> bpy.types.Object:
+    # View-layer objects only: addons (BlenderMCP) can leave orphan meshes in
+    # bpy.data that aren't selectable and would poison the join + autorig's
+    # single-mesh detection.
     candidates = [
-        o for o in bpy.data.objects
+        o for o in bpy.context.view_layer.objects
         if o.type == "MESH" and (prefix is None or o.name.startswith(prefix))
     ]
     if not candidates:
@@ -86,12 +89,18 @@ def _join_into_single_mesh(prefix: str | None = None) -> bpy.types.Object:
     joined.name = "rc_joined"
     if joined.parent is not None:
         bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
-    # Drop leftover empties for a clean scene.
+    # Everything except the joined mesh goes: source armatures/empties would
+    # confuse the heat-diffusion weighting and leak into the FBX
+    # (use_selection=False), and orphan addon objects break single-mesh
+    # detection. We build our own R15 rig from scratch.
     for o in list(bpy.data.objects):
-        if o is joined:
-            continue
-        if o.type == "EMPTY":
+        if o is not joined:
             bpy.data.objects.remove(o, do_unlink=True)
+    for mod in list(joined.modifiers):
+        if mod.type == "ARMATURE":
+            joined.modifiers.remove(mod)
+    for vg in list(joined.vertex_groups):
+        joined.vertex_groups.remove(vg)
     return joined
 
 

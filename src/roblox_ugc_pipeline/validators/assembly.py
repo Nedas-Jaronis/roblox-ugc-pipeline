@@ -105,13 +105,14 @@ def _pose_findings(report: MeshReport) -> list[Finding]:
 def _extents_findings(report: MeshReport) -> list[Finding]:
     out: list[Finding] = []
     by_name = {o.name: o for o in report.objects}
+    eps = 1e-3  # float ties from FBX round-trips are not real violations
     for upper, lower in EXTENTS_UPPER_LOWER_PAIRS:
         u = by_name.get(f"{upper}_Geo")
         lo_ = by_name.get(f"{lower}_Geo")
         if u is None or lo_ is None:
             continue
-        # Roblox Y (height) = Blender z (index 2). Strict, no tolerance.
-        if lo_.bbox_max[2] > u.bbox_max[2]:
+        # Roblox Y (height) = Blender z (index 2).
+        if lo_.bbox_max[2] > u.bbox_max[2] + eps:
             out.append(Finding(
                 validator="assembly.extents",
                 severity="error",
@@ -121,7 +122,7 @@ def _extents_findings(report: MeshReport) -> list[Finding]:
                 ),
                 remediation=f"Trim or re-bucket geometry so {lower} stays below {upper}'s top",
             ))
-        if u.bbox_min[2] < lo_.bbox_min[2]:
+        if u.bbox_min[2] < lo_.bbox_min[2] - eps:
             out.append(Finding(
                 validator="assembly.extents",
                 severity="error",
