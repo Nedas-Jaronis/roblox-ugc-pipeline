@@ -67,9 +67,10 @@ _BODY_ATTACHMENTS: tuple[tuple[str, str, tuple[float, float, float]], ...] = (
     ("Mouth_Att",               "Head",      (0.0, -0.5, 0.3)),
     ("NeckRig_Att",             "Head",      (0.0, 0.0, 0.0)),
 
-    # UpperTorso (head 0,0,3.0 ; tail 0,0,4.0).
-    ("LeftCollar_Att",          "UpperTorso",(-0.5, 0.0, 1.0)),
-    ("RightCollar_Att",         "UpperTorso",(0.5, 0.0, 1.0)),
+    # UpperTorso (head 0,0,3.0 ; tail 0,0,4.0). Character-left = +X in Blender
+    # (matches the flipped armature + Roblox's template convention).
+    ("LeftCollar_Att",          "UpperTorso",(0.5, 0.0, 1.0)),
+    ("RightCollar_Att",         "UpperTorso",(-0.5, 0.0, 1.0)),
     ("Neck_Att",                "UpperTorso",(0.0, 0.0, 1.0)),
     ("BodyFront_Att",           "UpperTorso",(0.0, -0.5, 0.5)),
     ("BodyBack_Att",            "UpperTorso",(0.0, 0.5, 0.5)),
@@ -762,8 +763,15 @@ def clamp_attachments_to_ugc_bounds(pieces: dict[str, bpy.types.Object]) -> dict
                 # so 0.01 studs of export/import drift is ~0.07 normalized —
                 # hence the absolute floor on top of the 5%.
                 m = 0.05 * h + 0.01
-                lo[b_axis] = max(lo[b_axis], c + box[0][r_axis] * h + m)
-                hi[b_axis] = min(hi[b_axis], c + box[1][r_axis] * h - m)
+                # Blender X maps to Roblox X with a SIGN FLIP (x_r = -x_b), so
+                # the world interval for Blender X uses the negated, swapped
+                # Roblox box bounds — must match normalize_to_mesh_space.
+                if b_axis == 0:
+                    box_lo, box_hi = -box[1][r_axis], -box[0][r_axis]
+                else:
+                    box_lo, box_hi = box[0][r_axis], box[1][r_axis]
+                lo[b_axis] = max(lo[b_axis], c + box_lo * h + m)
+                hi[b_axis] = min(hi[b_axis], c + box_hi * h - m)
         if not binding:
             continue
 
