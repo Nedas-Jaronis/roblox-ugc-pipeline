@@ -37,6 +37,10 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--texture-dir", default=None)
     p.add_argument("--texture-resolution", type=int, default=1024)
     p.add_argument("--no-decimate", action="store_true")
+    p.add_argument("--for-autosetup", action="store_true",
+                   help="Export for Studio Avatar Auto-Setup: skip attachment "
+                        "stamping and cage generation (auto-setup creates its "
+                        "own and fights pre-stamped ones)")
     p.add_argument("--join-prefix", default=None,
                    help="Only join meshes whose name starts with this prefix")
     return p.parse_args(argv)
@@ -113,6 +117,8 @@ def main() -> int:
     result = autorig.run_inplace(
         target_height=args.height,
         decimate=not args.no_decimate,
+        stamp_attachments=not args.for_autosetup,
+        generate_cages=not args.for_autosetup,
         out_fbx=str(Path(args.dst).resolve()),
         multi_view_sources=mv_sources,
         texture_dir=args.texture_dir,
