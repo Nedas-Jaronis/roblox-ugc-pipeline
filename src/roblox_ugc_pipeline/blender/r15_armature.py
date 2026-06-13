@@ -33,25 +33,28 @@ R15_BONE_DEFS: tuple[tuple[str, tuple[float, float, float], tuple[float, float, 
     ("UpperTorso",       (0.0, 0.0, 3.0),  (0.0, 0.0, 4.0),  "LowerTorso"),
     ("Head",             (0.0, 0.0, 4.0),  (0.0, 0.0, 5.0),  "UpperTorso"),
 
-    # Left arm chain (player's left = -X).
-    ("LeftUpperArm",     (-1.0, 0.0, 3.9), (-1.0, 0.0, 3.0), "UpperTorso"),
-    ("LeftLowerArm",     (-1.0, 0.0, 3.0), (-1.0, 0.0, 2.2), "LeftUpperArm"),
-    ("LeftHand",         (-1.0, 0.0, 2.2), (-1.0, 0.0, 1.8), "LeftLowerArm"),
+    # Left arm chain. CHARACTER-left = +X in Blender: Roblox's own template
+    # bodies (RoundMale.blend, verified 2026-06-12) put every Left* part and
+    # *_Att at +X, because the FBX axis conversion to Roblox space is the
+    # proper rotation x_r = -x_b, y_r = z_b, z_r = y_b (front -Y_b -> -Z_r).
+    ("LeftUpperArm",     (1.0, 0.0, 3.9),  (1.0, 0.0, 3.0),  "UpperTorso"),
+    ("LeftLowerArm",     (1.0, 0.0, 3.0),  (1.0, 0.0, 2.2),  "LeftUpperArm"),
+    ("LeftHand",         (1.0, 0.0, 2.2),  (1.0, 0.0, 1.8),  "LeftLowerArm"),
 
-    # Right arm chain (player's right = +X).
-    ("RightUpperArm",    (1.0, 0.0, 3.9),  (1.0, 0.0, 3.0),  "UpperTorso"),
-    ("RightLowerArm",    (1.0, 0.0, 3.0),  (1.0, 0.0, 2.2),  "RightUpperArm"),
-    ("RightHand",        (1.0, 0.0, 2.2),  (1.0, 0.0, 1.8),  "RightLowerArm"),
+    # Right arm chain (character right = -X in Blender).
+    ("RightUpperArm",    (-1.0, 0.0, 3.9), (-1.0, 0.0, 3.0), "UpperTorso"),
+    ("RightLowerArm",    (-1.0, 0.0, 3.0), (-1.0, 0.0, 2.2), "RightUpperArm"),
+    ("RightHand",        (-1.0, 0.0, 2.2), (-1.0, 0.0, 1.8), "RightLowerArm"),
 
-    # Left leg chain.
-    ("LeftUpperLeg",     (-0.5, 0.0, 2.4), (-0.5, 0.0, 1.4), "LowerTorso"),
-    ("LeftLowerLeg",     (-0.5, 0.0, 1.4), (-0.5, 0.0, 0.4), "LeftUpperLeg"),
-    ("LeftFoot",         (-0.5, 0.0, 0.4), (-0.5, 0.4, 0.4), "LeftLowerLeg"),
+    # Left leg chain (foot tails point forward = -Y, matching the template).
+    ("LeftUpperLeg",     (0.5, 0.0, 2.4),  (0.5, 0.0, 1.4),  "LowerTorso"),
+    ("LeftLowerLeg",     (0.5, 0.0, 1.4),  (0.5, 0.0, 0.4),  "LeftUpperLeg"),
+    ("LeftFoot",         (0.5, 0.0, 0.4),  (0.5, -0.4, 0.4), "LeftLowerLeg"),
 
     # Right leg chain.
-    ("RightUpperLeg",    (0.5, 0.0, 2.4),  (0.5, 0.0, 1.4),  "LowerTorso"),
-    ("RightLowerLeg",    (0.5, 0.0, 1.4),  (0.5, 0.0, 0.4),  "RightUpperLeg"),
-    ("RightFoot",        (0.5, 0.0, 0.4),  (0.5, 0.4, 0.4),  "RightLowerLeg"),
+    ("RightUpperLeg",    (-0.5, 0.0, 2.4), (-0.5, 0.0, 1.4), "LowerTorso"),
+    ("RightLowerLeg",    (-0.5, 0.0, 1.4), (-0.5, 0.0, 0.4), "RightUpperLeg"),
+    ("RightFoot",        (-0.5, 0.0, 0.4), (-0.5, -0.4, 0.4), "RightLowerLeg"),
 )
 
 

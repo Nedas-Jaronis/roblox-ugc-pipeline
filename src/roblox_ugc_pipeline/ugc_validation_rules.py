@@ -24,7 +24,10 @@ Coordinate convention: everything here is ROBLOX mesh-space — the attachment
 position minus the part-mesh bbox center, divided per-axis by the bbox half
 size (so the mesh itself spans [-1, 1]). Axes: +X = character RIGHT,
 +Y = up, -Z = front. Blender Z-up world maps as (x_b, y_b, z_b) ->
-(X=x_b, Y=z_b, Z=y_b).
+(X=-x_b, Y=z_b, Z=y_b) — the X FLIP is real: Roblox's own template bodies
+put Left* parts at +X in Blender (verified against RoundMale.blend), and
+only the flipped map is a proper rotation taking Blender front (-Y) to
+Roblox front (-Z).
 """
 
 from __future__ import annotations
@@ -36,13 +39,17 @@ _FULL = 1.59
 _DIV = 0.09
 _MED = 0.09
 _NARROW = 0.45
+# The 2024 FInt default for the extended division was 1.59, but Roblox's own
+# RoundMale template places its Grip attachments at normalized depth -2.61 —
+# the live value must be larger. Calibrated to 3.0 (template + margin).
+_EXT = 3.0
 
 FULL_MESH: Box = ((-_FULL, -_FULL, -_FULL), (_FULL, _FULL, _FULL))
-FULL_MESH_EXTENDED: Box = FULL_MESH
+FULL_MESH_EXTENDED: Box = ((-_EXT, -_EXT, -_EXT), (_EXT, _EXT, _EXT))
 LEFT_MESH_MEDIUM: Box = ((-_FULL, -_FULL, -_FULL), (-_MED, _FULL, _FULL))
 RIGHT_MESH_MEDIUM: Box = ((_MED, -_FULL, -_FULL), (_FULL, _FULL, _FULL))
 TOP_MESH: Box = ((-_FULL, _DIV, -_FULL), (_FULL, _FULL, _FULL))
-TOP_MESH_EXTENDED: Box = TOP_MESH
+TOP_MESH_EXTENDED: Box = ((-_FULL, _DIV, -_FULL), (_FULL, _EXT, _FULL))
 TOP_LEFT_MESH_NARROW: Box = ((-_FULL, _DIV, -_NARROW), (-_DIV, _FULL, _NARROW))
 TOP_RIGHT_MESH_NARROW: Box = ((_DIV, _DIV, -_NARROW), (_FULL, _FULL, _NARROW))
 TOP_CENTER_MESH: Box = ((-_NARROW, _DIV, -_NARROW), (_NARROW, _FULL, _NARROW))
@@ -158,6 +165,14 @@ RIG_ATTACHMENT_TO_PARENT: dict[str, str] = {
     "LeftUpperLeg": "LeftHipRigAttachment",
 }
 
+# Which BONE's head sits at each rig attachment. Roblox's own template FBX
+# files ship NO *RigAttachment markers — Studio derives every rig attachment
+# from the corresponding joint position at import. So when a rig-attachment
+# empty is absent, validate (and place) the bone head instead.
+RIG_ATTACHMENT_JOINT_BONE: dict[str, str] = {
+    att: part for part, att in RIG_ATTACHMENT_TO_PARENT.items()
+}
+
 # Every part each attachment name must validate against (rig attachments
 # appear in two parts; the same world position must satisfy all boxes).
 ATTACHMENT_CONSTRAINTS: dict[str, tuple[tuple[str, Box], ...]] = {}
@@ -267,7 +282,7 @@ def normalize_to_mesh_space(
     if any(h <= 1e-9 for h in half):
         return None
     n = [(position[i] - center[i]) / half[i] for i in range(3)]
-    return (n[0], n[2], n[1])  # Blender (x,y,z) -> Roblox (X=x, Y=z, Z=y)
+    return (-n[0], n[2], n[1])  # Blender (x,y,z) -> Roblox (X=-x, Y=z, Z=y)
 
 
 def box_contains(box: Box, p: Vec3) -> bool:

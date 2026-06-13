@@ -24,11 +24,12 @@ def check_avatar(report: MeshReport) -> list[Finding]:
                     message=f"Missing avatar attachment '{att}' (expected on {bone})",
                     remediation=f"Add an empty named '{att}' parented to {bone} in Blender",
                 ))
-    # Root_Att must be at origin per Roblox spec.
+    # Root_Att must be at origin per Roblox spec. Roblox's own RoundMale
+    # template has it at ~0.012 studs off, so allow a small tolerance.
     for a in report.attachments:
         if a.name == "Root_Att":
             x, y, z = a.position
-            if abs(x) > 0.01 or abs(y) > 0.01 or abs(z) > 0.01:
+            if abs(x) > 0.05 or abs(y) > 0.05 or abs(z) > 0.05:
                 out.append(Finding(
                     validator="attachments.avatar.root",
                     severity="error",

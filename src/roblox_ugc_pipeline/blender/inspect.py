@@ -108,14 +108,21 @@ def _attachments() -> list[dict]:
     out: list[dict] = []
     for obj in bpy.data.objects:
         # Two Roblox conventions: rigid accessories use `*Attachment`,
-        # avatar body uses `*_Att`. Capture both so validators can branch.
-        if obj.type == "EMPTY" and (obj.name.endswith("Attachment") or obj.name.endswith("_Att")):
+        # avatar body uses `*_Att`. Roblox's own template bodies model the
+        # markers as tiny MESH objects (not empties), so accept any type and
+        # take the world bbox center when there is geometry.
+        if obj.name.endswith("Attachment") or obj.name.endswith("_Att"):
             parent_bone = None
             if obj.parent and obj.parent_type == "BONE":
                 parent_bone = obj.parent_bone
             elif obj.parent and obj.parent.type == "ARMATURE":
                 parent_bone = obj.parent_bone or None
-            loc = obj.matrix_world.translation
+            if obj.type == "MESH" and obj.bound_box:
+                from mathutils import Vector  # type: ignore
+                corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+                loc = sum(corners, Vector()) / len(corners)
+            else:
+                loc = obj.matrix_world.translation
             out.append({
                 "name": obj.name,
                 "parent_bone": parent_bone,

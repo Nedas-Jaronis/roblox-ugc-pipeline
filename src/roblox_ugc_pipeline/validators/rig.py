@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..report import Finding, MeshReport
-from ..roblox_spec import R15_BONES
+from ..roblox_spec import R15_BONES, R15_ROOT_ALIASES
 
 
 def check_avatar(report: MeshReport) -> list[Finding]:
@@ -16,7 +16,11 @@ def check_avatar(report: MeshReport) -> list[Finding]:
         return out
 
     present = set(report.armature.bone_names)
-    missing = [b for b in R15_BONES if b not in present]
+    missing = [
+        b for b in R15_BONES
+        if b not in present
+        and not (b in R15_ROOT_ALIASES and present & R15_ROOT_ALIASES)
+    ]
     if missing:
         out.append(Finding(
             validator="rig.bones",
@@ -25,7 +29,7 @@ def check_avatar(report: MeshReport) -> list[Finding]:
             remediation="Rename bones to match the R15 standard exactly (case-sensitive)",
         ))
 
-    unexpected = [b for b in present if b not in R15_BONES]
+    unexpected = [b for b in present if b not in R15_BONES and b not in R15_ROOT_ALIASES]
     if unexpected:
         out.append(Finding(
             validator="rig.bones.extra",

@@ -66,6 +66,18 @@ def avatar_mesh_name(bone: str) -> str:
 
 AVATAR_BODY_MESHES: tuple[str, ...] = tuple(avatar_mesh_name(b) for b in R15_BONES if b != "HumanoidRootPart")
 
+# Roblox's FBX-side rigs name the root joint HumanoidRootNode (the engine-side
+# part is HumanoidRootPart) — official template bodies use the former.
+R15_ROOT_ALIASES: frozenset[str] = frozenset({"HumanoidRootPart", "HumanoidRootNode"})
+
+# Dynamic-head interior components. Auto-setup and the FACS pipeline require
+# eyes + mouth parts as separate meshes sharing no vertices with the head;
+# Roblox's own templates ship exactly these five (they fold into the Head
+# group for budgeting).
+HEAD_INTERIOR_MESHES: tuple[str, ...] = (
+    "LeftEye_Geo", "RightEye_Geo", "UpperTeeth_Geo", "LowerTeeth_Geo", "Tongue_Geo",
+)
+
 
 # --- Triangle budgets per body group (avatar body) -------------------------
 
@@ -85,7 +97,10 @@ BODY_GROUP_TRI_BUDGET: dict[str, int] = {
 }
 
 BODY_GROUP_MEMBERS: dict[str, tuple[str, ...]] = {
-    "Head":     ("Head_Geo",),
+    # Head-interior meshes (eyes/teeth/tongue) are optional members — present
+    # on FACS-ready bodies, absent on plain ones; they share the Head budget.
+    "Head":     ("Head_Geo", "LeftEye_Geo", "RightEye_Geo",
+                 "UpperTeeth_Geo", "LowerTeeth_Geo", "Tongue_Geo"),
     "Torso":    ("UpperTorso_Geo", "LowerTorso_Geo"),
     "LeftArm":  ("LeftUpperArm_Geo", "LeftLowerArm_Geo", "LeftHand_Geo"),
     "RightArm": ("RightUpperArm_Geo", "RightLowerArm_Geo", "RightHand_Geo"),

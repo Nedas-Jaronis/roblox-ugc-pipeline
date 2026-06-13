@@ -26,9 +26,13 @@ _DOCS_COVERED: frozenset[str] = frozenset(
     att_to_roblox_name(a) for atts in ATTACHMENTS_BY_BONE.values() for a in atts
 )
 
-# Studio's importer creates these itself (RootRigAttachment is placed at hip
-# height from the rig, not from an FBX marker) — absence in the FBX is fine.
-_IMPORTER_DERIVED: frozenset[str] = frozenset({"RootRigAttachment"})
+def _is_importer_derived(att_name: str) -> bool:
+    # Roblox's own template FBX/blend bodies ship NO *RigAttachment markers —
+    # Studio derives every rig attachment (Neck/Waist/Shoulder/Elbow/Wrist/
+    # Hip/Knee/Ankle/Root) from the corresponding joint position at import.
+    # So their absence is never an error; we only bounds-check the ones that
+    # ARE present (our own autorig stamps them).
+    return att_name.endswith("RigAttachment")
 
 
 def check_avatar(report: MeshReport) -> list[Finding]:
@@ -45,7 +49,7 @@ def check_avatar(report: MeshReport) -> list[Finding]:
         for att_name, box in rules.items():
             att = atts_by_roblox_name.get(att_name)
             if att is None:
-                if att_name not in _DOCS_COVERED and att_name not in _IMPORTER_DERIVED:
+                if att_name not in _DOCS_COVERED and not _is_importer_derived(att_name):
                     out.append(Finding(
                         validator="attachments.bounds",
                         severity="error",
