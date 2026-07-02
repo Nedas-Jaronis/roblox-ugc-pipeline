@@ -208,18 +208,43 @@ def recenter(obj: bpy.types.Object) -> None:
     bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
 
 
+def _weld_vertices(obj: bpy.types.Object, dist: float = 1e-4) -> None:
+    """Merge coincident vertices. Texture-baked GLB exports split every UV
+    seam vertex (~3 verts/tri), which leaves collapse-decimation nothing to
+    collapse — it stalls far above the target. Per-loop UVs survive the
+    merge, so texture seams are unaffected."""
+    import bmesh  # type: ignore
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist)
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.update()
+
+
 def decimate_to(obj: bpy.types.Object, target: int) -> tuple[int, int]:
-    """Decimate-collapse to ~`target` tris. Returns (before, after)."""
+    """Decimate-collapse to ~`target` tris. Returns (before, after).
+
+    Collapse gets unreliable below ~1% per pass, so million-tri generated
+    meshes need several passes to actually reach the cap instead of
+    stalling at the ratio floor (same fix as the body path's
+    decimate_per_group).
+    """
     before = _total_tris([obj])
-    if before <= target or before == 0:
-        return before, before
-    ratio = max(0.01, target / before)
-    mod = obj.modifiers.new(name="rc_decimate", type="DECIMATE")
-    mod.decimate_type = "COLLAPSE"
-    mod.ratio = ratio
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.modifier_apply(modifier=mod.name)
-    return before, _total_tris([obj])
+    if before > target:
+        _weld_vertices(obj)
+    current = _total_tris([obj])
+    passes = 0
+    while current > target and current > 0 and passes < 5:
+        ratio = max(0.01, target / current)
+        mod = obj.modifiers.new(name="rc_decimate", type="DECIMATE")
+        mod.decimate_type = "COLLAPSE"
+        mod.ratio = ratio
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        current = _total_tris([obj])
+        passes += 1
+    return before, current
 
 
 def attachment_positions(category, bb_min: Vector, bb_max: Vector) -> dict[str, Vector]:
