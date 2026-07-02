@@ -109,6 +109,9 @@ src/roblox_ugc_pipeline/
                         # UGCValidation-mirror bounds tables
     assembly.py         # Limb pose windows (validatePose), upper/lower part
                         # extent ordering, leg-overlap check
+    render_checks.py    # From-scratch ports of the C++-only checks: opacity
+                        # (silhouette raster), cage distance/size, origin caps.
+                        # Measurements come from blender/inspect.py.
     materials.py        # PBR maps + 2048 texture-size cap (uses Pillow if avail)
     registry.py
   blender/              # Run inside `blender --background`
@@ -147,6 +150,15 @@ src/roblox_ugc_pipeline/
 | Back bounds | 10×7×4.5 studs |
 | Mesh naming | `<BoneName>_Geo` (body), `<BoneName>_OuterCage` (LayeredClothing) |
 | Attachment naming | `*Attachment` on accessories, `*_Att` on body |
+
+## Regression controls
+
+`scripts/regression.py` pins the validator calibration to two fixtures:
+Roblox's own RoundMale template (positive control — MUST read 0 errors) and
+the rigged cherry mascot (negative control — must keep firing
+scale-feasibility + attachment-box errors). Run it after any validator or
+inspect.py change. `scripts/full_loop.sh <mesh>` = autorig → inspect →
+validate in one command (drives Windows Blender from WSL).
 
 ## Iteration loop (the marketplace-prep workflow)
 
