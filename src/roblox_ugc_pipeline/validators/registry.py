@@ -8,6 +8,7 @@ from . import (
     bounds,
     materials,
     polycount,
+    render_checks,
     rig,
     scale_feasibility,
 )
@@ -22,6 +23,7 @@ def validate_avatar(report: MeshReport) -> ValidationResult:
     findings += attachments.check_avatar(report)
     findings += attachment_bounds.check_avatar(report)
     findings += assembly.check_avatar(report)
+    findings += render_checks.check_avatar(report)
     findings += materials.check(report)
     return ValidationResult(target="avatar", findings=findings)
 

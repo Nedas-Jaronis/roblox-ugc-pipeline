@@ -41,6 +41,10 @@ class ObjectReport(BaseModel):
     parent: str | None = None
     bbox_min: Vec3
     bbox_max: Vec3
+    # Mesh-space bbox-center distance from the object origin (gate cap 0.001).
+    origin_offset: float | None = None
+    # For *_OuterCage objects: max vertex distance to the render mesh surface.
+    cage_max_dist: float | None = None
 
 
 class MeshReport(BaseModel):
@@ -57,6 +61,9 @@ class MeshReport(BaseModel):
     armature: ArmatureReport | None = None
     attachments: list[AttachmentReport] = Field(default_factory=list)
     materials: list[MaterialReport] = Field(default_factory=list)
+    # Per body group, silhouette fill fraction of the group's bbox per view
+    # axis ("x" side views, "y" front/back, "z" top/bottom).
+    group_view_fill: dict[str, dict[str, float]] = Field(default_factory=dict)
     notes: list[str] = Field(default_factory=list)
 
     def extents(self) -> Vec3:
