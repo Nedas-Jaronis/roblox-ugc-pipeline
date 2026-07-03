@@ -1,13 +1,18 @@
 """Auto-prep an accessory mesh for Roblox marketplace submission.
 
-Pipeline:
+Pipeline (same proven axis/unit contract as the body autorig: Blender Z-up
+scene, front = -Y, character-left = +X, 1 Blender unit = 1 stud, exported
+with axis_forward=-Z / axis_up=Y / apply_unit_scale=False):
   1. Join all visible mesh objects into a single mesh (per-accessory norm).
-  2. Re-orient: pick the axis closest to the category's "tallest" extent and
-     rotate so that axis becomes Y (Blender world +Z; FBX Y-up after axis fix).
-  3. Uniform-scale to fit the category bbox in studs.
-  4. Recenter: bbox center at origin XY, bbox bottom at Y=0.
-  5. Decimate to the category triangle cap (defaults to ratio so this is a
-     no-op when already under budget).
+  2. Optional --yaw about Z (single-image reconstructions keep the photo's
+     framing, which often points the front sideways). No automatic
+     re-orientation: glTF imports already land upright in Z-up, and extent
+     heuristics guess wrong on wider-than-tall items like hats.
+  3. Uniform-scale to a sensible wear size (largest horizontal dimension ->
+     --target-size studs, default per category), clamped to the category cap.
+  4. Recenter: bbox center at origin XY, bbox bottom at Z=0.
+  5. Decimate to the category triangle cap (weld first: baked GLBs arrive
+     as unwelded triangle soup).
   6. Stamp the required Attachment empties at spec positions.
   7. Export FBX with Roblox-friendly settings.
 
@@ -155,24 +160,31 @@ def orient_to_y_up(obj: bpy.types.Object, category_max_bounds_studs: tuple[float
     return "rotated +90 deg about X (Z was tallest)"
 
 
-def scale_to_bbox(obj: bpy.types.Object, max_bounds_studs: tuple[float, float, float], margin: float = 0.02) -> tuple[float, Vector]:
-    """Uniformly scale so all extents fit the category bbox with `margin` slack.
+def scale_to_bbox(
+    obj: bpy.types.Object,
+    max_bounds_studs: tuple[float, float, float],
+    target_size_studs: float,
+    margin: float = 0.02,
+) -> tuple[float, Vector]:
+    """Uniformly scale to wear size, clamped to the category cap.
+
+    Scene convention: 1 Blender unit = 1 stud, Z up. Roblox caps come as
+    (X width, Y height, Z depth) -> Blender (x, z, y). The wear-size target
+    sets the largest HORIZONTAL dimension (a hat should relate to the
+    ~1.2-stud head, not fill the 3-stud legal box).
 
     Returns (scale_factor, new_extents_in_studs).
     """
     bb_min, bb_max = _world_bbox([obj])
-    ex_m = _extents(bb_min, bb_max)
-    # Convert max bounds from studs to meters.
-    cap_m = tuple(b * STUD_M for b in max_bounds_studs)
-    # Need every axis i to satisfy ex_m[i] * scale <= cap_m[i] * (1 - margin).
-    # Take the minimum ratio across axes.
-    target_caps = tuple(cap_m[i] * (1 - margin) for i in range(3))
-    ratios = [target_caps[i] / ex_m[i] for i in range(3) if ex_m[i] > 1e-9]
-    if not ratios:
+    ex = _extents(bb_min, bb_max)
+    caps_blender = (max_bounds_studs[0], max_bounds_studs[2], max_bounds_studs[1])
+    horizontal = max(ex.x, ex.y)
+    if horizontal <= 1e-9:
         return 1.0, Vector((0, 0, 0))
-    scale = min(ratios)
-    # If we're already inside the cap (scale > 1), don't UPSCALE — leave as is.
-    scale = min(scale, 1.0) if min(ratios) < 1.0 else 1.0
+    scale = target_size_studs / horizontal
+    cap_ratios = [caps_blender[i] * (1 - margin) / ex[i] for i in range(3) if ex[i] > 1e-9]
+    if cap_ratios:
+        scale = min(scale, min(cap_ratios))
 
     if abs(scale - 1.0) > 1e-6:
         bpy.ops.object.select_all(action="DESELECT")
@@ -182,23 +194,22 @@ def scale_to_bbox(obj: bpy.types.Object, max_bounds_studs: tuple[float, float, f
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
     bb_min, bb_max = _world_bbox([obj])
-    ex_m = _extents(bb_min, bb_max)
-    ex_studs = Vector((ex_m.x / STUD_M, ex_m.y / STUD_M, ex_m.z / STUD_M))
-    return scale, ex_studs
+    ex = _extents(bb_min, bb_max)
+    return scale, Vector((ex.x, ex.y, ex.z))
 
 
 def recenter(obj: bpy.types.Object) -> None:
-    """Move bbox center to origin XY, bbox bottom (min Y) to Y=0.
+    """Move bbox center to origin XY, bbox bottom (min Z) to Z=0.
 
     Operates in WORLD space — the join step already unparented the mesh and
     baked rotation/scale, so obj.location maps 1:1 to world translation.
     """
     bb_min, bb_max = _world_bbox([obj])
     cx = (bb_min.x + bb_max.x) / 2
-    cz = (bb_min.z + bb_max.z) / 2
+    cy = (bb_min.y + bb_max.y) / 2
     obj.location.x -= cx
-    obj.location.y -= bb_min.y
-    obj.location.z -= cz
+    obj.location.y -= cy
+    obj.location.z -= bb_min.z
     bpy.context.view_layer.update()
     # Bake the recenter into the mesh so subsequent attachment placement uses
     # the cleanest possible local-space coordinates.
@@ -248,37 +259,42 @@ def decimate_to(obj: bpy.types.Object, target: int) -> tuple[int, int]:
 
 
 def attachment_positions(category, bb_min: Vector, bb_max: Vector) -> dict[str, Vector]:
-    """Heuristic spec positions for each required attachment of a category."""
+    """Heuristic spec positions for each required attachment of a category.
+
+    Scene convention (matches the body autorig + Roblox's template bodies):
+    Z up, front = -Y, character-left = +X.
+    """
     cx = (bb_min.x + bb_max.x) / 2
-    cz = (bb_min.z + bb_max.z) / 2
-    bottom_y = bb_min.y
-    top_y = bb_max.y
-    front_z = bb_max.z  # +Z forward (Roblox convention is debatable here)
-    back_z = bb_min.z
+    cy = (bb_min.y + bb_max.y) / 2
+    mid_z = (bb_min.z + bb_max.z) / 2
+    bottom_z = bb_min.z
+    top_z = bb_max.z
+    front_y = bb_min.y
+    back_y = bb_max.y
 
     # Build a dict for every possible attachment we might need; the caller
     # picks the ones actually required by the category spec.
     return {
         # Hat / Hair: anchor at bottom-center where it meets the head.
-        "HatAttachment":          Vector((cx, bottom_y, cz)),
-        "HairAttachment":         Vector((cx, bottom_y, cz)),
+        "HatAttachment":          Vector((cx, cy, bottom_z)),
+        "HairAttachment":         Vector((cx, cy, bottom_z)),
         # Face accessories: front and center of the face mesh.
-        "FaceFrontAttachment":    Vector((cx, (bottom_y + top_y) / 2, front_z)),
-        "FaceCenterAttachment":   Vector((cx, (bottom_y + top_y) / 2, cz)),
+        "FaceFrontAttachment":    Vector((cx, front_y, mid_z)),
+        "FaceCenterAttachment":   Vector((cx, cy, mid_z)),
         # Neck: top center.
-        "NeckAttachment":         Vector((cx, top_y, cz)),
-        # Shoulder: per-side approximations.
-        "LeftShoulderAttachment":  Vector((bb_min.x, (bottom_y + top_y) / 2, cz)),
-        "RightShoulderAttachment": Vector((bb_max.x, (bottom_y + top_y) / 2, cz)),
-        "LeftCollarAttachment":    Vector((bb_min.x, top_y, cz)),
-        "RightCollarAttachment":   Vector((bb_max.x, top_y, cz)),
+        "NeckAttachment":         Vector((cx, cy, top_z)),
+        # Shoulder: per-side approximations (character-left = +X).
+        "LeftShoulderAttachment":  Vector((bb_max.x, cy, mid_z)),
+        "RightShoulderAttachment": Vector((bb_min.x, cy, mid_z)),
+        "LeftCollarAttachment":    Vector((bb_max.x, cy, top_z)),
+        "RightCollarAttachment":   Vector((bb_min.x, cy, top_z)),
         # Torso accessories: front/back center.
-        "BodyFrontAttachment":     Vector((cx, (bottom_y + top_y) / 2, front_z)),
-        "BodyBackAttachment":      Vector((cx, (bottom_y + top_y) / 2, back_z)),
+        "BodyFrontAttachment":     Vector((cx, front_y, mid_z)),
+        "BodyBackAttachment":      Vector((cx, back_y, mid_z)),
         # Waist: front/center/back.
-        "WaistFrontAttachment":    Vector((cx, bottom_y, front_z)),
-        "WaistCenterAttachment":   Vector((cx, bottom_y, cz)),
-        "WaistBackAttachment":     Vector((cx, bottom_y, back_z)),
+        "WaistFrontAttachment":    Vector((cx, front_y, bottom_z)),
+        "WaistCenterAttachment":   Vector((cx, cy, bottom_z)),
+        "WaistBackAttachment":     Vector((cx, back_y, bottom_z)),
     }
 
 
@@ -313,10 +329,12 @@ def stamp_attachments(obj: bpy.types.Object, required_names: tuple[str, ...]) ->
 
 def export_fbx(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Same contract as the body autorig's export (proven in Studio): the
+    # scene is built at 1 Blender unit = 1 stud, so write raw units.
     bpy.ops.export_scene.fbx(
         filepath=str(path),
         use_selection=False,
-        apply_unit_scale=True,
+        apply_unit_scale=False,
         bake_space_transform=True,
         object_types={"MESH", "EMPTY", "ARMATURE"},
         add_leaf_bones=False,
@@ -334,6 +352,10 @@ def run_inplace(
     category: str,
     out_fbx: str | None = None,
     decimate_margin: float = 0.95,
+    yaw_deg: float = 0.0,
+    # Largest horizontal dimension in studs. A worn hat should relate to the
+    # ~1.2-stud head, not fill the 3-stud legal box.
+    target_size_studs: float = 1.8,
     bake: bool = False,
     bake_png: str | None = None,
     bake_resolution: int = 2048,
@@ -356,11 +378,27 @@ def run_inplace(
         raise RuntimeError("No mesh objects in scene to prep.")
     log["steps"]["join"] = f"joined into '{obj.name}'"
 
-    log["steps"]["orient"] = orient_to_y_up(obj, cat.max_bounds)
+    # No automatic re-orientation: glTF imports land upright in Z-up, and
+    # extent heuristics guess wrong on wider-than-tall items (hats). Use
+    # --yaw for the photo-framing spin instead.
+    log["steps"]["orient"] = "identity (use --yaw to spin about the vertical)"
 
-    scale, ex_studs = scale_to_bbox(obj, cat.max_bounds)
+    if yaw_deg:
+        # Single-image reconstructions keep the source photo's framing, which
+        # often leaves the accessory's face pointing sideways. Yaw spins it
+        # about the vertical axis BEFORE scaling/recentering/attachments so
+        # everything downstream sees the final orientation.
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        obj.rotation_euler.rotate_axis("Z", math.radians(yaw_deg))
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        log["steps"]["yaw"] = f"rotated {yaw_deg} deg about Z"
+
+    scale, ex_studs = scale_to_bbox(obj, cat.max_bounds, target_size_studs)
     log["steps"]["scale"] = {
         "factor": round(scale, 4),
+        "target_size_studs": target_size_studs,
         "extents_studs_after": [round(ex_studs.x, 3), round(ex_studs.y, 3), round(ex_studs.z, 3)],
         "cap_studs": list(cat.max_bounds),
     }
@@ -419,6 +457,11 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--in", dest="src", required=True)
     p.add_argument("--out", dest="dst", required=True)
     p.add_argument("--category", required=True)
+    p.add_argument("--target-size", type=float, default=1.8,
+                   help="Largest horizontal dimension in studs (wear size)")
+    p.add_argument("--yaw", type=float, default=0.0,
+                   help="Extra rotation (deg) about the vertical axis, e.g. 90 "
+                        "when the reconstructed front faces sideways")
     p.add_argument("--bake", action="store_true", help="Bake BaseColor into a PNG")
     p.add_argument("--bake-png", default=None,
                    help="Output PNG path (default: <out_dir>/basecolor.png)")
@@ -454,6 +497,8 @@ def main() -> int:
     log = run_inplace(
         category=args.category,
         out_fbx=args.dst,
+        yaw_deg=args.yaw,
+        target_size_studs=args.target_size,
         bake=args.bake,
         bake_png=bake_png,
         bake_resolution=args.bake_resolution,
