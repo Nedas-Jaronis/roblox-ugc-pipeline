@@ -329,11 +329,14 @@ def stamp_attachments(obj: bpy.types.Object, required_names: tuple[str, ...]) ->
 
 def export_fbx(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Same contract as the body autorig's export (proven in Studio): the
-    # scene is built at 1 Blender unit = 1 stud, so write raw units.
+    # Scene is 1 Blender unit = 1 stud. Roblox's Import 3D applies a x100
+    # unit conversion to Blender FBXs with these flags (measured: a 1.8-stud
+    # hat imported at Handle.Size 180), so bake 0.01 into the data and let
+    # Roblox's x100 land the mesh at true stud size.
     bpy.ops.export_scene.fbx(
         filepath=str(path),
         use_selection=False,
+        global_scale=0.01,
         apply_unit_scale=False,
         bake_space_transform=True,
         object_types={"MESH", "EMPTY", "ARMATURE"},
