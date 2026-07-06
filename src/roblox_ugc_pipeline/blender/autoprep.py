@@ -356,6 +356,7 @@ def run_inplace(
     out_fbx: str | None = None,
     decimate_margin: float = 0.95,
     yaw_deg: float = 0.0,
+    pitch_deg: float = 0.0,
     # Largest horizontal dimension in studs. A worn hat should relate to the
     # ~1.2-stud head, not fill the 3-stud legal box.
     target_size_studs: float = 1.8,
@@ -386,17 +387,22 @@ def run_inplace(
     # --yaw for the photo-framing spin instead.
     log["steps"]["orient"] = "identity (use --yaw to spin about the vertical)"
 
-    if yaw_deg:
-        # Single-image reconstructions keep the source photo's framing, which
-        # often leaves the accessory's face pointing sideways. Yaw spins it
-        # about the vertical axis BEFORE scaling/recentering/attachments so
-        # everything downstream sees the final orientation.
+    if yaw_deg or pitch_deg:
+        # Single-image reconstructions keep the source photo's framing: the
+        # face often points sideways (fix with yaw about the vertical) and a
+        # photographed-from-above product shot bakes in a forward lean (fix
+        # with pitch about X; positive pitches the front UP). Applied BEFORE
+        # scaling/recentering/attachments so everything downstream sees the
+        # final orientation.
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
-        obj.rotation_euler.rotate_axis("Z", math.radians(yaw_deg))
+        if yaw_deg:
+            obj.rotation_euler.rotate_axis("Z", math.radians(yaw_deg))
+        if pitch_deg:
+            obj.rotation_euler.rotate_axis("X", math.radians(pitch_deg))
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-        log["steps"]["yaw"] = f"rotated {yaw_deg} deg about Z"
+        log["steps"]["yaw"] = f"yaw {yaw_deg} deg about Z, pitch {pitch_deg} deg about X"
 
     scale, ex_studs = scale_to_bbox(obj, cat.max_bounds, target_size_studs)
     log["steps"]["scale"] = {
@@ -465,6 +471,9 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--yaw", type=float, default=0.0,
                    help="Extra rotation (deg) about the vertical axis, e.g. 90 "
                         "when the reconstructed front faces sideways")
+    p.add_argument("--pitch", type=float, default=0.0,
+                   help="Extra rotation (deg) about X; positive pitches the "
+                        "front up (counters photographed-from-above lean)")
     p.add_argument("--bake", action="store_true", help="Bake BaseColor into a PNG")
     p.add_argument("--bake-png", default=None,
                    help="Output PNG path (default: <out_dir>/basecolor.png)")
@@ -501,6 +510,7 @@ def main() -> int:
         category=args.category,
         out_fbx=args.dst,
         yaw_deg=args.yaw,
+        pitch_deg=args.pitch,
         target_size_studs=args.target_size,
         bake=args.bake,
         bake_png=bake_png,
