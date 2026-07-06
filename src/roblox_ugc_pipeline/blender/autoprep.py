@@ -325,6 +325,104 @@ def stamp_attachments(obj: bpy.types.Object, required_names: tuple[str, ...]) ->
     return stamped
 
 
+
+
+def _load_project_paint():
+    import importlib
+    try:
+        return importlib.import_module("roblox_ugc_pipeline.blender.project_paint")
+    except ImportError:
+        here = Path(__file__).resolve()
+        for q in (here.parent.parent.parent, here.parent.parent):
+            if (q / "roblox_ugc_pipeline").exists():
+                sys.path.insert(0, str(q))
+                return importlib.import_module("roblox_ugc_pipeline.blender.project_paint")
+        raise
+
+
+def project_source_texture(obj, image_path: Path, out_dir: Path, resolution: int = 2048) -> dict:
+    """Replace the mesh's texture by projecting the SOURCE PHOTO from the
+    front and flood-filling everything the photo can't see.
+
+    Single-image reconstructions are built in the photo's frame, so an ortho
+    projection along -Y registers with the geometry by construction — the
+    photo's crisp details land exactly on the features they created. Beats
+    multiview-diffusion bakes for items with a featureless back: no seams
+    chopping details across UV islands, no per-island color drift.
+    """
+    import numpy as np
+    pp = _load_project_paint()
+
+    # Tight-crop the photo to its non-white content, then square-pad on white
+    # so the ortho camera's square framing of the mesh bbox registers with
+    # the image content (product shots ship with white padding).
+    src = pp._load_image_pixels(Path(image_path))
+    content = (src[..., :3].min(axis=2) < 0.92)
+    ys, xs = np.where(content)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    crop = src[y0:y1, x0:x1]
+    # Pad to the SAME 1.15 margin setup_front_camera puts around the mesh
+    # bbox — the ortho frame and the image frame must cover identical
+    # world/image fractions or the projection lands scaled-off.
+    side = int(max(crop.shape[0], crop.shape[1]) * 1.15)
+    sq = np.ones((side, side, 4), dtype=crop.dtype)
+    oy, ox = (side - crop.shape[0]) // 2, (side - crop.shape[1]) // 2
+    sq[oy:oy + crop.shape[0], ox:ox + crop.shape[1]] = crop
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cropped_path = out_dir / "proj_source_cropped.png"
+    pp._save_image_pixels(sq, cropped_path)
+
+    # Fresh, clean unwrap (the incoming GLB carries fragmented bake islands).
+    while obj.data.uv_layers:
+        obj.data.uv_layers.remove(obj.data.uv_layers[0])
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=66.0, island_margin=0.02)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    cam = pp.setup_front_camera([obj], view_axis="-Y", name="rc_hat_proj_cam")
+    bpy.context.scene.camera = cam
+    proj_png = out_dir / "proj_front.png"
+    pp.project_and_bake(obj, cropped_path, proj_png, resolution=resolution,
+                        shared_camera=cam, cleanup_camera=False)
+    weight_png = out_dir / "proj_weight.png"
+    pp._bake_facing_weight(obj, cam, weight_png, resolution=resolution)
+    bpy.data.objects.remove(cam, do_unlink=True)
+
+    # Composite IN LINEAR SPACE on the live bake buffers, then save through
+    # the baked image itself — the PNG-helper round trip re-encodes
+    # colorspace asymmetrically and washes/darkens the result.
+    target = bpy.data.images[f"rc_proj_baked_{obj.name}"]
+    facing = bpy.data.images[f"rc_facing_{obj.name}"]
+    proj = np.empty(resolution * resolution * 4, dtype=np.float32)
+    target.pixels.foreach_get(proj)
+    proj = proj.reshape(resolution, resolution, 4)
+    wbuf = np.empty(resolution * resolution * 4, dtype=np.float32)
+    facing.pixels.foreach_get(wbuf)
+    weight = wbuf.reshape(resolution, resolution, 4)[..., 0]
+
+    seen = weight > 0.7
+    if seen.sum() < 100:
+        return {"status": "projection saw too little of the mesh; kept bake"}
+    fill = np.median(proj[seen][:, :3], axis=0)
+    t = np.clip((weight - 0.35) / 0.25, 0.0, 1.0)[..., None]
+    out = proj.copy()
+    out[..., :3] = proj[..., :3] * t + fill[None, None, :] * (1.0 - t)
+    out[..., 3] = 1.0
+    target.pixels.foreach_set(out.astype(np.float32).ravel())
+    final_png = out_dir / "albedo_projected.png"
+    target.filepath_raw = str(final_png)
+    target.file_format = "PNG"
+    target.save()
+    # project_and_bake's final material already samples `target`; nothing to
+    # rewire — the export embeds the composited image.
+    return {"status": "ok", "albedo": str(final_png),
+            "fill_rgb_linear": [round(float(v), 3) for v in fill]}
+
+
 # ---------- export ------------------------------------------------------------
 
 def export_fbx(path: Path) -> None:
@@ -357,6 +455,7 @@ def run_inplace(
     decimate_margin: float = 0.95,
     yaw_deg: float = 0.0,
     pitch_deg: float = 0.0,
+    project_image: str | None = None,
     # Largest horizontal dimension in studs. A worn hat should relate to the
     # ~1.2-stud head, not fill the 3-stud legal box.
     target_size_studs: float = 1.8,
@@ -387,6 +486,49 @@ def run_inplace(
     # --yaw for the photo-framing spin instead.
     log["steps"]["orient"] = "identity (use --yaw to spin about the vertical)"
 
+    scale, ex_studs = scale_to_bbox(obj, cat.max_bounds, target_size_studs)
+    log["steps"]["scale"] = {
+        "factor": round(scale, 4),
+        "target_size_studs": target_size_studs,
+        "extents_studs_after": [round(ex_studs.x, 3), round(ex_studs.y, 3), round(ex_studs.z, 3)],
+        "cap_studs": list(cat.max_bounds),
+    }
+
+    recenter(obj)
+    log["steps"]["recenter"] = "moved bbox center to origin XY, bottom to Y=0"
+
+    target_tris = int(cat.max_tris * decimate_margin)
+    before, after = decimate_to(obj, target_tris)
+    log["steps"]["decimate"] = {"before": before, "after": after, "target": target_tris}
+
+    # Recalculate outward normals: marching-cubes/generated meshes often ship
+    # inverted or mixed winding, which flips lighting AND breaks every
+    # normal-based computation downstream (the projection facing-weight read
+    # ~0 on camera-facing surfaces and flood-filled the face away).
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    # Smooth shading: welded+decimated meshes come out flat-shaded, which
+    # renders every triangle as a visible facet in Roblox. Interpolated
+    # normals (exported via mesh_smooth_type=FACE) make the low-poly surface
+    # read as smooth — this is what separates "AI-generated look" from
+    # "product look".
+    for poly in obj.data.polygons:
+        poly.use_smooth = True
+    obj.data.update()
+    log["steps"]["shade"] = "smooth shading on all polygons"
+
+    if project_image:
+        log["steps"]["project"] = project_source_texture(
+            obj, Path(project_image),
+            Path(out_fbx).parent / "projection" if out_fbx else Path("projection"),
+        )
+
     if yaw_deg or pitch_deg:
         # Single-image reconstructions keep the source photo's framing: the
         # face often points sideways (fix with yaw about the vertical) and a
@@ -411,31 +553,8 @@ def run_inplace(
         bpy.context.view_layer.update()
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
         log["steps"]["yaw"] = f"yaw {yaw_deg} deg about Z, pitch {pitch_deg} deg about X"
+        recenter(obj)
 
-    scale, ex_studs = scale_to_bbox(obj, cat.max_bounds, target_size_studs)
-    log["steps"]["scale"] = {
-        "factor": round(scale, 4),
-        "target_size_studs": target_size_studs,
-        "extents_studs_after": [round(ex_studs.x, 3), round(ex_studs.y, 3), round(ex_studs.z, 3)],
-        "cap_studs": list(cat.max_bounds),
-    }
-
-    recenter(obj)
-    log["steps"]["recenter"] = "moved bbox center to origin XY, bottom to Y=0"
-
-    target_tris = int(cat.max_tris * decimate_margin)
-    before, after = decimate_to(obj, target_tris)
-    log["steps"]["decimate"] = {"before": before, "after": after, "target": target_tris}
-
-    # Smooth shading: welded+decimated meshes come out flat-shaded, which
-    # renders every triangle as a visible facet in Roblox. Interpolated
-    # normals (exported via mesh_smooth_type=FACE) make the low-poly surface
-    # read as smooth — this is what separates "AI-generated look" from
-    # "product look".
-    for poly in obj.data.polygons:
-        poly.use_smooth = True
-    obj.data.update()
-    log["steps"]["shade"] = "smooth shading on all polygons"
 
     required = cat.attachment if isinstance(cat.attachment, tuple) else (cat.attachment,)
     stamped = stamp_attachments(obj, required)
@@ -489,6 +608,10 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--yaw", type=float, default=0.0,
                    help="Extra rotation (deg) about the vertical axis, e.g. 90 "
                         "when the reconstructed front faces sideways")
+    p.add_argument("--project-image", default=None,
+                   help="Project this source photo onto the mesh from the "
+                        "front, flood-filling unseen areas (replaces the "
+                        "incoming bake texture)")
     p.add_argument("--pitch", type=float, default=0.0,
                    help="Extra rotation (deg) about X; positive pitches the "
                         "front up (counters photographed-from-above lean)")
@@ -529,6 +652,7 @@ def main() -> int:
         out_fbx=args.dst,
         yaw_deg=args.yaw,
         pitch_deg=args.pitch,
+        project_image=args.project_image,
         target_size_studs=args.target_size,
         bake=args.bake,
         bake_png=bake_png,
