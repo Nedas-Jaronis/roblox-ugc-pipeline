@@ -2,11 +2,11 @@
 fixtures and must keep reading them the same way.
 
   POSITIVE control — Roblox's own RoundMale template body
-    (runs/templates/roundmale_report.json): a Marketplace-valid body by
+    (tests/fixtures/roundmale_report.json): a Marketplace-valid body by
     definition. ANY error on it is a bug in our validators.
 
   NEGATIVE control — the rigged cherry mascot
-    (runs/loop/cherry-flip/report.json): a body that can never pass (sphere
+    (tests/fixtures/cherry_report.json): a body that can never pass (sphere
     torso, fused stub arms). It must keep producing errors from the expected
     families; if it suddenly reads clean, a check went blind.
 
@@ -28,8 +28,10 @@ sys.path.insert(0, str(REPO / "src"))
 from roblox_ugc_pipeline.report import MeshReport  # noqa: E402
 from roblox_ugc_pipeline.validators import registry  # noqa: E402
 
-POSITIVE = REPO / "runs/templates/roundmale_report.json"
-NEGATIVE = REPO / "runs/loop/cherry-flip/report.json"
+# Tracked fixtures so a fresh clone can run the calibration check without
+# regenerating the control models (re-inspect the models to refresh them).
+POSITIVE = REPO / "tests/fixtures/roundmale_report.json"
+NEGATIVE = REPO / "tests/fixtures/cherry_report.json"
 
 # Error families the negative control must keep firing (families, not exact
 # messages — inputs get re-rigged and details shift, but a sphere body must

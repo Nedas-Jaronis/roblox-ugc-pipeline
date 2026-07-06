@@ -1,0 +1,1422 @@
+{
+  "source_path": "C:\\Users\\jaron\\Documents\\GitHub\\robloxCharacters\\runs\\templates\\RoundMale\\RoundMale.blend",
+  "units": "studs",
+  "bbox_min": [
+    -1.1471328735351562,
+    -1.1787530183792114,
+    -2.4124460220336914
+  ],
+  "bbox_max": [
+    1.1471328735351562,
+    0.7171565294265747,
+    3.3048460483551025
+  ],
+  "triangle_count": 12186,
+  "vertex_count": 6381,
+  "objects": [
+    {
+      "name": "BodyBack_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        0.24459552764892578,
+        1.0926059484481812
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.5520955324172974,
+        1.4001060724258423
+      ],
+      "origin_offset": 0.03181892086327463
+    },
+    {
+      "name": "BodyFront_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.510930061340332,
+        0.9987460970878601
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        -0.20343005657196045,
+        1.3062461614608765
+      ],
+      "origin_offset": 0.02933353276435093
+    },
+    {
+      "name": "FaceCenter_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.2552342712879181,
+        2.2071244716644287
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.05226576328277588,
+        2.51462459564209
+      ],
+      "origin_offset": 0.05163596019578427
+    },
+    {
+      "name": "FaceFront_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -1.005599856376648,
+        2.064570903778076
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        -0.6980998516082764,
+        2.372070789337158
+      ],
+      "origin_offset": 0.05494518907677057
+    },
+    {
+      "name": "Hair_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.262896329164505,
+        2.9961330890655518
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.04460369795560837,
+        3.303633213043213
+      ],
+      "origin_offset": 0.07001511231525856
+    },
+    {
+      "name": "Hat_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.262896329164505,
+        2.9973461627960205
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.04460369795560837,
+        3.3048460483551025
+      ],
+      "origin_offset": 0.071227892827764
+    },
+    {
+      "name": "Head_Geo",
+      "triangle_count": 2104,
+      "vertex_count": 1054,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.7705599665641785,
+        -0.8771964311599731,
+        1.5580109357833862
+      ],
+      "bbox_max": [
+        0.7705599665641785,
+        0.6738352179527283,
+        3.1677191257476807
+      ],
+      "origin_offset": 2.3650517347886115
+    },
+    {
+      "name": "Head_OuterCage",
+      "triangle_count": 630,
+      "vertex_count": 335,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.8101791143417358,
+        -0.9568215012550354,
+        1.589298129081726
+      ],
+      "bbox_max": [
+        0.8101791143417358,
+        0.7171565294265747,
+        3.207158088684082
+      ],
+      "origin_offset": 2.4012200970568185,
+      "cage_max_dist": 0.12378454953432083
+    },
+    {
+      "name": "LeftCollar_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.23432576656341553,
+        -0.15375027060508728,
+        1.4054960012435913
+      ],
+      "bbox_max": [
+        0.5418257713317871,
+        0.1537497639656067,
+        1.712996006011963
+      ],
+      "origin_offset": 0.03878093942444414
+    },
+    {
+      "name": "LeftEye_Geo",
+      "triangle_count": 105,
+      "vertex_count": 61,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.08630833029747009,
+        -0.6411097049713135,
+        2.11820650100708
+      ],
+      "bbox_max": [
+        0.5192978978157043,
+        -0.40533146262168884,
+        2.558117389678955
+      ],
+      "origin_offset": 2.41504688778422
+    },
+    {
+      "name": "LeftFoot_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.25083887577056885,
+        -0.1674858033657074,
+        -2.4124457836151123
+      ],
+      "bbox_max": [
+        0.5583457946777344,
+        0.14001423120498657,
+        -2.1049439907073975
+      ],
+      "origin_offset": 0.054799213202044235
+    },
+    {
+      "name": "LeftFoot_Geo",
+      "triangle_count": 190,
+      "vertex_count": 97,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.21841007471084595,
+        -0.4703598618507385,
+        -2.228889226913452
+      ],
+      "bbox_max": [
+        0.6093840003013611,
+        0.2668488919734955,
+        -1.8155795335769653
+      ],
+      "origin_offset": 2.066663316617538
+    },
+    {
+      "name": "LeftFoot_OuterCage",
+      "triangle_count": 116,
+      "vertex_count": 64,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        0.20818966627120972,
+        -0.47735467553138733,
+        -2.234044075012207
+      ],
+      "bbox_max": [
+        0.6150417327880859,
+        0.28211408853530884,
+        -1.8870549201965332
+      ],
+      "origin_offset": 2.103526007140527,
+      "cage_max_dist": 0.04506966844201088
+    },
+    {
+      "name": "LeftGrip_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.5724520683288574,
+        -1.1787530183792114,
+        -0.6195111274719238
+      ],
+      "bbox_max": [
+        0.9356300830841064,
+        0.15374688804149628,
+        -0.25633367896080017
+      ],
+      "origin_offset": 0.5129263779252421
+    },
+    {
+      "name": "LeftHand_Geo",
+      "triangle_count": 182,
+      "vertex_count": 93,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.6134507060050964,
+        -0.20618592202663422,
+        -0.598048985004425
+      ],
+      "bbox_max": [
+        1.1036403179168701,
+        0.17345982789993286,
+        -0.016078004613518715
+      ],
+      "origin_offset": 0.9119518312478431
+    },
+    {
+      "name": "LeftHand_OuterCage",
+      "triangle_count": 114,
+      "vertex_count": 63,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        0.5977317094802856,
+        -0.2305838018655777,
+        -0.6097109317779541
+      ],
+      "bbox_max": [
+        1.1471328735351562,
+        0.18402248620986938,
+        -0.0382549948990345
+      ],
+      "origin_offset": 0.9309377031894407,
+      "cage_max_dist": 0.06066415458917618
+    },
+    {
+      "name": "LeftLowerArm_Geo",
+      "triangle_count": 260,
+      "vertex_count": 132,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.57527095079422,
+        -0.1620628386735916,
+        -0.19207192957401276
+      ],
+      "bbox_max": [
+        1.0300405025482178,
+        0.20142175257205963,
+        0.57396399974823
+      ],
+      "origin_offset": 0.825290262068385
+    },
+    {
+      "name": "LeftLowerArm_OuterCage",
+      "triangle_count": 120,
+      "vertex_count": 70,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        0.552506685256958,
+        -0.18292675912380219,
+        -0.09817592799663544
+      ],
+      "bbox_max": [
+        1.046762228012085,
+        0.2172067016363144,
+        0.57124924659729
+      ],
+      "origin_offset": 0.8340615273407356,
+      "cage_max_dist": 0.03609950840473175
+    },
+    {
+      "name": "LeftLowerLeg_Geo",
+      "triangle_count": 356,
+      "vertex_count": 180,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.15248824656009674,
+        -0.1902346909046173,
+        -2.057072639465332
+      ],
+      "bbox_max": [
+        0.5837897658348083,
+        0.2635883390903473,
+        -1.0006849765777588
+      ],
+      "origin_offset": 1.5730039955978723
+    },
+    {
+      "name": "LeftLowerLeg_OuterCage",
+      "triangle_count": 140,
+      "vertex_count": 80,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        0.13116656243801117,
+        -0.18579092621803284,
+        -1.8870552778244019
+      ],
+      "bbox_max": [
+        0.5908273458480835,
+        0.27263060212135315,
+        -1.0528045892715454
+      ],
+      "origin_offset": 1.5142319597498484,
+      "cage_max_dist": 0.04345151036977768
+    },
+    {
+      "name": "LeftShoulder_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.5161471366882324,
+        -0.15340344607830048,
+        1.1070812940597534
+      ],
+      "bbox_max": [
+        0.8858038187026978,
+        0.1540965884923935,
+        1.4767374992370605
+      ],
+      "origin_offset": 0.03912829437885895
+    },
+    {
+      "name": "LeftUpperArm_Geo",
+      "triangle_count": 220,
+      "vertex_count": 112,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.4926390051841736,
+        -0.21207991242408752,
+        0.4791988432407379
+      ],
+      "bbox_max": [
+        0.9002561569213867,
+        0.2945992648601532,
+        1.4454941749572754
+      ],
+      "origin_offset": 1.1886347218884148
+    },
+    {
+      "name": "LeftUpperArm_OuterCage",
+      "triangle_count": 120,
+      "vertex_count": 70,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        0.4784032106399536,
+        -0.2349778264760971,
+        0.5017983913421631
+      ],
+      "bbox_max": [
+        0.9128708243370056,
+        0.3274681568145752,
+        1.4514094591140747
+      ],
+      "origin_offset": 1.1999186797608332,
+      "cage_max_dist": 0.05216474458575249
+    },
+    {
+      "name": "LeftUpperLeg_Geo",
+      "triangle_count": 288,
+      "vertex_count": 146,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        0.04941422492265701,
+        -0.21111410856246948,
+        -1.1040326356887817
+      ],
+      "bbox_max": [
+        0.5476114153862,
+        0.31569403409957886,
+        -0.09550842642784119
+      ],
+      "origin_offset": 0.6719887950363436
+    },
+    {
+      "name": "LeftUpperLeg_OuterCage",
+      "triangle_count": 140,
+      "vertex_count": 80,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        0.03041023202240467,
+        -0.23696056008338928,
+        -1.0530445575714111
+      ],
+      "bbox_max": [
+        0.5576402544975281,
+        0.3209684193134308,
+        -0.12859268486499786
+      ],
+      "origin_offset": 0.661272940055513,
+      "cage_max_dist": 0.037921760231256485
+    },
+    {
+      "name": "LowerTeeth_Geo",
+      "triangle_count": 296,
+      "vertex_count": 162,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.25878360867500305,
+        -0.6006796360015869,
+        1.8584604263305664
+      ],
+      "bbox_max": [
+        0.2588287889957428,
+        -0.3901829421520233,
+        1.9613401889801025
+      ],
+      "origin_offset": 1.973112016032724
+    },
+    {
+      "name": "LowerTorso_Geo",
+      "triangle_count": 334,
+      "vertex_count": 169,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.5303627252578735,
+        -0.2790880799293518,
+        -0.36862796545028687
+      ],
+      "bbox_max": [
+        0.5303627252578735,
+        0.3689693212509155,
+        0.39904382824897766
+      ],
+      "origin_offset": 0.047444078170987045
+    },
+    {
+      "name": "LowerTorso_OuterCage",
+      "triangle_count": 148,
+      "vertex_count": 92,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.5392167568206787,
+        -0.2917202413082123,
+        -0.3741910755634308
+      ],
+      "bbox_max": [
+        0.5392225384712219,
+        0.38086700439453125,
+        0.17751413583755493
+      ],
+      "origin_offset": 0.1079686996788353,
+      "cage_max_dist": 0.03189768269658089
+    },
+    {
+      "name": "Neck_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.09809429198503494,
+        1.5237348079681396
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.20940573513507843,
+        1.8312349319458008
+      ],
+      "origin_offset": 0.040837217485468
+    },
+    {
+      "name": "RightCollar_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.5418257713317871,
+        -0.15375027060508728,
+        1.4054960012435913
+      ],
+      "bbox_max": [
+        -0.23432573676109314,
+        0.1537497639656067,
+        1.712996006011963
+      ],
+      "origin_offset": 0.03878093473402266
+    },
+    {
+      "name": "RightEye_Geo",
+      "triangle_count": 105,
+      "vertex_count": 61,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.5192978382110596,
+        -0.6411096453666687,
+        2.118206739425659
+      ],
+      "bbox_max": [
+        -0.0863083153963089,
+        -0.40533143281936646,
+        2.558117628097534
+      ],
+      "origin_offset": 2.4150470790583443
+    },
+    {
+      "name": "RightFoot_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.5583458542823792,
+        -0.16748571395874023,
+        -2.4124460220336914
+      ],
+      "bbox_max": [
+        -0.25083884596824646,
+        0.1400143951177597,
+        -2.1049442291259766
+      ],
+      "origin_offset": 0.05479921021460991
+    },
+    {
+      "name": "RightFoot_Geo",
+      "triangle_count": 190,
+      "vertex_count": 97,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.6093839406967163,
+        -0.47035983204841614,
+        -2.2288894653320312
+      ],
+      "bbox_max": [
+        -0.21841001510620117,
+        0.26684892177581787,
+        -1.8155795335769653
+      ],
+      "origin_offset": 2.06666329791595
+    },
+    {
+      "name": "RightFoot_OuterCage",
+      "triangle_count": 116,
+      "vertex_count": 64,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.6150417327880859,
+        -0.47735467553138733,
+        -2.234044075012207
+      ],
+      "bbox_max": [
+        -0.2081896811723709,
+        0.28211408853530884,
+        -1.8870549201965332
+      ],
+      "origin_offset": 2.1035260142244234,
+      "cage_max_dist": 0.045069582760334015
+    },
+    {
+      "name": "RightGrip_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.935630202293396,
+        -1.1787530183792114,
+        -0.6195110082626343
+      ],
+      "bbox_max": [
+        -0.5724518299102783,
+        0.15374688804149628,
+        -0.25633352994918823
+      ],
+      "origin_offset": 0.5129263774145754
+    },
+    {
+      "name": "RightHand_Geo",
+      "triangle_count": 182,
+      "vertex_count": 93,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -1.1036403179168701,
+        -0.20618592202663422,
+        -0.5980488657951355
+      ],
+      "bbox_max": [
+        -0.6134507060050964,
+        0.17345982789993286,
+        -0.01607792265713215
+      ],
+      "origin_offset": 0.9119517127838827
+    },
+    {
+      "name": "RightHand_OuterCage",
+      "triangle_count": 114,
+      "vertex_count": 63,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -1.1471328735351562,
+        -0.2305838018655777,
+        -0.6097109317779541
+      ],
+      "bbox_max": [
+        -0.5977317094802856,
+        0.18402248620986938,
+        -0.03824737295508385
+      ],
+      "origin_offset": 0.9309363426261906,
+      "cage_max_dist": 0.060597509145736694
+    },
+    {
+      "name": "RightLowerArm_Geo",
+      "triangle_count": 260,
+      "vertex_count": 132,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -1.0300393104553223,
+        -0.1620628386735916,
+        -0.1920718252658844
+      ],
+      "bbox_max": [
+        -0.5752710103988647,
+        0.20142175257205963,
+        0.5739638805389404
+      ],
+      "origin_offset": 0.8252896910579085
+    },
+    {
+      "name": "RightLowerArm_OuterCage",
+      "triangle_count": 120,
+      "vertex_count": 70,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -1.046762466430664,
+        -0.1829238086938858,
+        -0.09817160665988922
+      ],
+      "bbox_max": [
+        -0.552506685256958,
+        0.21720655262470245,
+        0.5712560415267944
+      ],
+      "origin_offset": 0.8340631283156276,
+      "cage_max_dist": 0.036092955619096756
+    },
+    {
+      "name": "RightLowerLeg_Geo",
+      "triangle_count": 356,
+      "vertex_count": 180,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.5837897062301636,
+        -0.19023467600345612,
+        -2.057072639465332
+      ],
+      "bbox_max": [
+        -0.15248823165893555,
+        0.2635883688926697,
+        -1.0006849765777588
+      ],
+      "origin_offset": 1.5730039819063402
+    },
+    {
+      "name": "RightLowerLeg_OuterCage",
+      "triangle_count": 140,
+      "vertex_count": 80,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.5908273458480835,
+        -0.1857862025499344,
+        -1.8870552778244019
+      ],
+      "bbox_max": [
+        -0.13116656243801117,
+        0.27263060212135315,
+        -1.0528045892715454
+      ],
+      "origin_offset": 1.5142320127206994,
+      "cage_max_dist": 0.04345151036977768
+    },
+    {
+      "name": "RightShoulder_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.8938062191009521,
+        -0.15388137102127075,
+        1.104827880859375
+      ],
+      "bbox_max": [
+        -0.5241491198539734,
+        0.15361866354942322,
+        1.4744840860366821
+      ],
+      "origin_offset": 0.03913999185584921
+    },
+    {
+      "name": "RightUpperArm_Geo",
+      "triangle_count": 220,
+      "vertex_count": 112,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.9002561569213867,
+        -0.21207991242408752,
+        0.47919875383377075
+      ],
+      "bbox_max": [
+        -0.4924582839012146,
+        0.29459309577941895,
+        1.4454940557479858
+      ],
+      "origin_offset": 1.188581647454794
+    },
+    {
+      "name": "RightUpperArm_OuterCage",
+      "triangle_count": 120,
+      "vertex_count": 70,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.9128702878952026,
+        -0.23497723042964935,
+        0.5017983913421631
+      ],
+      "bbox_max": [
+        -0.47841376066207886,
+        0.3274681568145752,
+        1.4514247179031372
+      ],
+      "origin_offset": 1.1999277442438014,
+      "cage_max_dist": 0.05215737968683243
+    },
+    {
+      "name": "RightUpperLeg_Geo",
+      "triangle_count": 288,
+      "vertex_count": 146,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.5476072430610657,
+        -0.21111410856246948,
+        -1.1040520668029785
+      ],
+      "bbox_max": [
+        -0.04929019883275032,
+        0.31569403409957886,
+        -0.09556582570075989
+      ],
+      "origin_offset": 0.6719944994580174
+    },
+    {
+      "name": "RightUpperLeg_OuterCage",
+      "triangle_count": 140,
+      "vertex_count": 80,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.5576401948928833,
+        -0.23695866763591766,
+        -1.0530444383621216
+      ],
+      "bbox_max": [
+        -0.030410217121243477,
+        0.3209676444530487,
+        -0.12859578430652618
+      ],
+      "origin_offset": 0.6612742600569208,
+      "cage_max_dist": 0.03792461007833481
+    },
+    {
+      "name": "Root_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.15375006198883057,
+        -0.14177224040031433
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.1537499576807022,
+        0.16572780907154083
+      ],
+      "origin_offset": 0.008498445204645854
+    },
+    {
+      "name": "Tongue_Geo",
+      "triangle_count": 194,
+      "vertex_count": 103,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.13280506432056427,
+        -0.5871613025665283,
+        1.8784784078598022
+      ],
+      "bbox_max": [
+        0.13298676908016205,
+        -0.265504390001297,
+        2.0436482429504395
+      ],
+      "origin_offset": 2.0068702399816307
+    },
+    {
+      "name": "UpperTeeth_Geo",
+      "triangle_count": 360,
+      "vertex_count": 196,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.2536875307559967,
+        -0.6113941669464111,
+        1.9396249055862427
+      ],
+      "bbox_max": [
+        0.25443822145462036,
+        -0.387470006942749,
+        2.0461509227752686
+      ],
+      "origin_offset": 2.054515684416013
+    },
+    {
+      "name": "UpperTorso_Geo",
+      "triangle_count": 878,
+      "vertex_count": 441,
+      "materials": [
+        "SA_Overlay"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.719272255897522,
+        -0.36183038353919983,
+        0.0016522411024197936
+      ],
+      "bbox_max": [
+        0.719272255897522,
+        0.4171975553035736,
+        1.661587119102478
+      ],
+      "origin_offset": 0.8320802793921732
+    },
+    {
+      "name": "UpperTorso_OuterCage",
+      "triangle_count": 412,
+      "vertex_count": 231,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Cage",
+      "bbox_min": [
+        -0.7006675601005554,
+        -0.3767341673374176,
+        0.16695675253868103
+      ],
+      "bbox_max": [
+        0.7006675601005554,
+        0.43166473507881165,
+        1.6106112003326416
+      ],
+      "origin_offset": 0.8892082152793517,
+      "cage_max_dist": 0.052160028368234634
+    },
+    {
+      "name": "WaistBack_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        0.21695341169834137,
+        0.024858450517058372
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.5244534611701965,
+        0.3323585093021393
+      ],
+      "origin_offset": 0.012408592192316575
+    },
+    {
+      "name": "WaistCenter_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.15375006198883057,
+        0.19468609988689423
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        0.1537499576807022,
+        0.5021861791610718
+      ],
+      "origin_offset": 0.008498445204645854
+    },
+    {
+      "name": "WaistFront_Att",
+      "triangle_count": 112,
+      "vertex_count": 58,
+      "materials": [
+        "lambert18"
+      ],
+      "parent": "Joints",
+      "bbox_min": [
+        -0.1537499874830246,
+        -0.4442070722579956,
+        0.024858329445123672
+      ],
+      "bbox_max": [
+        0.1537500023841858,
+        -0.13670702278614044,
+        0.33235839009284973
+      ],
+      "origin_offset": 0.011063956147358027
+    }
+  ],
+  "armature": {
+    "name": "Joints",
+    "bone_names": [
+      "Root",
+      "HumanoidRootNode",
+      "LowerTorso",
+      "UpperTorso",
+      "Head",
+      "Tongue",
+      "LowerTeeth",
+      "UpperTeeth",
+      "LeftEye",
+      "RightEye",
+      "DynamicHead",
+      "R_cheek_ntr",
+      "R_cheek",
+      "R_cheekOutter",
+      "R_UpperCheek",
+      "R_innercheek",
+      "R_nostril",
+      "L_cheek_ntr",
+      "L_Cheek",
+      "L_cheekOutter",
+      "L_UpperCheek",
+      "L_innercheek",
+      "L_nostril",
+      "lowerLip",
+      "L_lowerLip",
+      "R_lipCorneR_b",
+      "R_lowerLip",
+      "L_lipCorneR_b",
+      "upperLip",
+      "L_lipCorneR_t",
+      "L_upperLip",
+      "R_lipCorner",
+      "L_lipCorner",
+      "R_upperLip",
+      "R_lipCorneR_t",
+      "R_lowerEyeLid",
+      "R_lowerEyeLid_In",
+      "R_lowerEyeLid_Out",
+      "R_upperEyeLid",
+      "R_upperEyeLid_In",
+      "R_upperEyeLid_Out",
+      "R_EyeLid_In",
+      "R_EyeLid_Out",
+      "L_EyeLid_Out",
+      "L_EyeLid_In",
+      "L_upperEyeLid",
+      "L_upperEyeLid_In",
+      "L_upperEyeLid_Out",
+      "L_lowerEyeLid",
+      "L_lowerEyeLid_In",
+      "L_lowerEyeLid_Out",
+      "L_innerCheek",
+      "midnose_Down",
+      "midnose",
+      "R_brow_B",
+      "R_brow_C",
+      "R_brow_A",
+      "R_BrowsCenter",
+      "L_brow_B",
+      "L_brow_C",
+      "L_brow_A",
+      "L_BrowsCenter",
+      "jaw",
+      "chin",
+      "TongueRoot",
+      "TongueBase",
+      "TongueTip",
+      "LowerTeethRoot",
+      "R_innerCheek",
+      "RightEyeRoot",
+      "LeftEyeRoot",
+      "UpperTeethRoot",
+      "RightUpperArm",
+      "RightLowerArm",
+      "RightHand",
+      "LeftUpperArm",
+      "LeftLowerArm",
+      "LeftHand",
+      "LeftUpperLeg",
+      "LeftLowerLeg",
+      "LeftFoot",
+      "RightUpperLeg",
+      "RightLowerLeg",
+      "RightFoot"
+    ]
+  },
+  "attachments": [
+    {
+      "name": "BodyBack_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        7.450580596923828e-09,
+        0.3983455300331116,
+        1.2463560104370117
+      ]
+    },
+    {
+      "name": "BodyFront_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        7.450580596923828e-09,
+        -0.35718005895614624,
+        1.1524962186813354
+      ]
+    },
+    {
+      "name": "FaceCenter_Att",
+      "parent_bone": "Head",
+      "position": [
+        7.450580596923828e-09,
+        -0.10148424655199051,
+        2.360874652862549
+      ]
+    },
+    {
+      "name": "FaceFront_Att",
+      "parent_bone": "Head",
+      "position": [
+        7.450580596923828e-09,
+        -0.8518499135971069,
+        2.218320846557617
+      ]
+    },
+    {
+      "name": "Hair_Att",
+      "parent_bone": "Head",
+      "position": [
+        7.450580596923828e-09,
+        -0.10914630442857742,
+        3.1498830318450928
+      ]
+    },
+    {
+      "name": "Hat_Att",
+      "parent_bone": "Head",
+      "position": [
+        7.450580596923828e-09,
+        -0.10914630442857742,
+        3.1510961055755615
+      ]
+    },
+    {
+      "name": "LeftCollar_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        0.3880757689476013,
+        -2.5331974029541016e-07,
+        1.5592458248138428
+      ]
+    },
+    {
+      "name": "LeftFoot_Att",
+      "parent_bone": "LeftFoot",
+      "position": [
+        0.4045923352241516,
+        -0.013735786080360413,
+        -2.258694887161255
+      ]
+    },
+    {
+      "name": "LeftGrip_Att",
+      "parent_bone": "LeftHand",
+      "position": [
+        0.7540410757064819,
+        -0.5125030875205994,
+        -0.4379224181175232
+      ]
+    },
+    {
+      "name": "LeftShoulder_Att",
+      "parent_bone": "LeftUpperArm",
+      "position": [
+        0.7009754180908203,
+        0.0003465712070465088,
+        1.2919094562530518
+      ]
+    },
+    {
+      "name": "Neck_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        7.450580596923828e-09,
+        0.05565572902560234,
+        1.6774848699569702
+      ]
+    },
+    {
+      "name": "RightCollar_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        -0.38807570934295654,
+        -2.5331974029541016e-07,
+        1.5592458248138428
+      ]
+    },
+    {
+      "name": "RightFoot_Att",
+      "parent_bone": "RightFoot",
+      "position": [
+        -0.4045923352241516,
+        -0.013735659420490265,
+        -2.258695125579834
+      ]
+    },
+    {
+      "name": "RightGrip_Att",
+      "parent_bone": "RightHand",
+      "position": [
+        -0.7540410757064819,
+        -0.5125030279159546,
+        -0.43792226910591125
+      ]
+    },
+    {
+      "name": "RightShoulder_Att",
+      "parent_bone": "RightUpperArm",
+      "position": [
+        -0.7089776992797852,
+        -0.00013135001063346863,
+        1.2896560430526733
+      ]
+    },
+    {
+      "name": "Root_Att",
+      "parent_bone": "Root",
+      "position": [
+        7.450580596923828e-09,
+        -5.21540641784668e-08,
+        0.0119777861982584
+      ]
+    },
+    {
+      "name": "WaistBack_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        7.450580596923828e-09,
+        0.37070345878601074,
+        0.1786084771156311
+      ]
+    },
+    {
+      "name": "WaistCenter_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        7.450580596923828e-09,
+        -5.21540641784668e-08,
+        0.3484361171722412
+      ]
+    },
+    {
+      "name": "WaistFront_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        7.450580596923828e-09,
+        -0.2904570400714874,
+        0.17860835790634155
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "lambert18",
+      "base_color_texture": null,
+      "normal_texture": null,
+      "metallic_roughness_texture": null
+    },
+    {
+      "name": "SA_Overlay",
+      "base_color_texture": null,
+      "normal_texture": "//TXT_RoundHeadMale_NOR.png",
+      "metallic_roughness_texture": "//TXT_RoundHeadMale_MET.png"
+    }
+  ],
+  "group_view_fill": {
+    "Head": {
+      "x": 0.717529296875,
+      "y": 0.71685791015625,
+      "z": 0.69232177734375
+    },
+    "Torso": {
+      "x": 0.806884765625,
+      "y": 0.72857666015625,
+      "z": 0.79522705078125
+    },
+    "LeftArm": {
+      "x": 0.69696044921875,
+      "y": 0.49493408203125,
+      "z": 0.6925048828125
+    },
+    "RightArm": {
+      "x": 0.69696044921875,
+      "y": 0.4947509765625,
+      "z": 0.6944580078125
+    },
+    "LeftLeg": {
+      "x": 0.55572509765625,
+      "y": 0.67486572265625,
+      "z": 0.73291015625
+    },
+    "RightLeg": {
+      "x": 0.55572509765625,
+      "y": 0.6749267578125,
+      "z": 0.73297119140625
+    }
+  },
+  "notes": []
+}

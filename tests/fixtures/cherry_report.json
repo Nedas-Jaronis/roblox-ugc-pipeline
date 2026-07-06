@@ -1,0 +1,982 @@
+{
+  "source_path": "C:\\Users\\jaron\\Documents\\GitHub\\robloxCharacters\\runs\\loop\\cherry-flip\\rigged.fbx",
+  "units": "studs",
+  "bbox_min": [
+    -1.8060083389282227,
+    -1.3662883043289185,
+    0.02588796429336071
+  ],
+  "bbox_max": [
+    1.8146469593048096,
+    1.3692660331726074,
+    5.000588893890381
+  ],
+  "triangle_count": 21460,
+  "vertex_count": 19308,
+  "objects": [
+    {
+      "name": "Head_Geo",
+      "triangle_count": 4000,
+      "vertex_count": 3107,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -0.5843431353569031,
+        -1.177116870880127,
+        3.925828695297241
+      ],
+      "bbox_max": [
+        1.3223538398742676,
+        -0.606220543384552,
+        5.000588893890381
+      ],
+      "origin_offset": 3.104938620777074e-05
+    },
+    {
+      "name": "Head_OuterCage",
+      "triangle_count": 4000,
+      "vertex_count": 3107,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -0.5843431353569031,
+        -1.177116870880127,
+        3.925828695297241
+      ],
+      "bbox_max": [
+        1.3223538398742676,
+        -0.606220543384552,
+        5.000588893890381
+      ],
+      "origin_offset": 3.104938620777074e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "LeftFoot_Geo",
+      "triangle_count": 232,
+      "vertex_count": 183,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.0917946100234985,
+        -0.6133664846420288,
+        0.365364670753479
+      ],
+      "bbox_max": [
+        -0.25391048192977905,
+        -0.04837290942668915,
+        0.5336545705795288
+      ],
+      "origin_offset": 4.9664369836012026e-05
+    },
+    {
+      "name": "LeftFoot_OuterCage",
+      "triangle_count": 232,
+      "vertex_count": 183,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.0917946100234985,
+        -0.6133664846420288,
+        0.365364670753479
+      ],
+      "bbox_max": [
+        -0.25391048192977905,
+        -0.04837290942668915,
+        0.5336545705795288
+      ],
+      "origin_offset": 4.9664369836012026e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "LeftHand_Geo",
+      "triangle_count": 803,
+      "vertex_count": 784,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.8060083389282227,
+        -0.9165383577346802,
+        0.9039131999015808
+      ],
+      "bbox_max": [
+        -1.0400445461273193,
+        0.9619797468185425,
+        2.3040964603424072
+      ],
+      "origin_offset": 2.1579186437577746e-05
+    },
+    {
+      "name": "LeftHand_OuterCage",
+      "triangle_count": 803,
+      "vertex_count": 784,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.8060083389282227,
+        -0.9165383577346802,
+        0.9039131999015808
+      ],
+      "bbox_max": [
+        -1.0400445461273193,
+        0.9619797468185425,
+        2.3040964603424072
+      ],
+      "origin_offset": 2.1579186437577746e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "LeftLowerArm_Geo",
+      "triangle_count": 362,
+      "vertex_count": 348,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.490882158279419,
+        -0.9145025014877319,
+        2.110257148742676
+      ],
+      "bbox_max": [
+        -0.8234873414039612,
+        0.9460546374320984,
+        3.0319299697875977
+      ],
+      "origin_offset": 2.8546580404464274e-05
+    },
+    {
+      "name": "LeftLowerArm_OuterCage",
+      "triangle_count": 362,
+      "vertex_count": 348,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.490882158279419,
+        -0.9145025014877319,
+        2.110257148742676
+      ],
+      "bbox_max": [
+        -0.8234873414039612,
+        0.9460546374320984,
+        3.0319299697875977
+      ],
+      "origin_offset": 2.8546580404464274e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "LeftLowerLeg_Geo",
+      "triangle_count": 548,
+      "vertex_count": 384,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.2166517972946167,
+        -1.1258217096328735,
+        0.8621283173561096
+      ],
+      "bbox_max": [
+        0.033745646476745605,
+        0.18041832745075226,
+        1.467596411705017
+      ],
+      "origin_offset": 3.147125244140625e-05
+    },
+    {
+      "name": "LeftLowerLeg_OuterCage",
+      "triangle_count": 548,
+      "vertex_count": 384,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.2166517972946167,
+        -1.1258217096328735,
+        0.8621283173561096
+      ],
+      "bbox_max": [
+        0.033745646476745605,
+        0.18041832745075226,
+        1.467596411705017
+      ],
+      "origin_offset": 3.147125244140625e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "LeftUpperArm_Geo",
+      "triangle_count": 82,
+      "vertex_count": 127,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.100648283958435,
+        -0.550477921962738,
+        2.9667909145355225
+      ],
+      "bbox_max": [
+        -0.6391651630401611,
+        0.6889153718948364,
+        3.2028400897979736
+      ],
+      "origin_offset": 0.0
+    },
+    {
+      "name": "LeftUpperArm_OuterCage",
+      "triangle_count": 82,
+      "vertex_count": 127,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.100648283958435,
+        -0.550477921962738,
+        2.9667909145355225
+      ],
+      "bbox_max": [
+        -0.6391651630401611,
+        0.6889153718948364,
+        3.2028400897979736
+      ],
+      "origin_offset": 0.0,
+      "cage_max_dist": 0.025469498708844185
+    },
+    {
+      "name": "LeftUpperLeg_Geo",
+      "triangle_count": 463,
+      "vertex_count": 311,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.2146451473236084,
+        -1.1365418434143066,
+        1.3360977172851562
+      ],
+      "bbox_max": [
+        0.02213066816329956,
+        -0.3764055669307709,
+        2.472052574157715
+      ],
+      "origin_offset": 3.110791479167955e-05
+    },
+    {
+      "name": "LeftUpperLeg_OuterCage",
+      "triangle_count": 463,
+      "vertex_count": 311,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.2146451473236084,
+        -1.1365418434143066,
+        1.3360977172851562
+      ],
+      "bbox_max": [
+        0.02213066816329956,
+        -0.3764055669307709,
+        2.472052574157715
+      ],
+      "origin_offset": 3.110791479167955e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "LowerTorso_Geo",
+      "triangle_count": 1205,
+      "vertex_count": 1416,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.1182767152786255,
+        -1.3662883043289185,
+        1.1301448345184326
+      ],
+      "bbox_max": [
+        1.1209748983383179,
+        1.3692660331726074,
+        3.1442224979400635
+      ],
+      "origin_offset": 3.4172960028016885e-05
+    },
+    {
+      "name": "LowerTorso_OuterCage",
+      "triangle_count": 1205,
+      "vertex_count": 1416,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -1.1182767152786255,
+        -1.3662883043289185,
+        1.1301448345184326
+      ],
+      "bbox_max": [
+        1.1209748983383179,
+        1.3692660331726074,
+        3.1442224979400635
+      ],
+      "origin_offset": 3.4172960028016885e-05,
+      "cage_max_dist": 0.040354758501052856
+    },
+    {
+      "name": "RightFoot_Geo",
+      "triangle_count": 203,
+      "vertex_count": 147,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.12409612536430359,
+        -0.6246436238288879,
+        0.02588796429336071
+      ],
+      "bbox_max": [
+        0.2835138738155365,
+        0.13443544507026672,
+        0.6579545140266418
+      ],
+      "origin_offset": 5.855591366961957e-05
+    },
+    {
+      "name": "RightFoot_OuterCage",
+      "triangle_count": 203,
+      "vertex_count": 147,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.12409612536430359,
+        -0.6246436238288879,
+        0.02588796429336071
+      ],
+      "bbox_max": [
+        0.2835138738155365,
+        0.13443544507026672,
+        0.6579545140266418
+      ],
+      "origin_offset": 5.855591366961957e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "RightHand_Geo",
+      "triangle_count": 318,
+      "vertex_count": 352,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        1.0529775619506836,
+        -0.7266643643379211,
+        1.0345313549041748
+      ],
+      "bbox_max": [
+        1.8146469593048096,
+        0.8202387690544128,
+        2.295074939727783
+      ],
+      "origin_offset": 2.5589767198560217e-05
+    },
+    {
+      "name": "RightHand_OuterCage",
+      "triangle_count": 318,
+      "vertex_count": 352,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        1.0529775619506836,
+        -0.7266643643379211,
+        1.0345313549041748
+      ],
+      "bbox_max": [
+        1.8146469593048096,
+        0.8202387690544128,
+        2.295074939727783
+      ],
+      "origin_offset": 2.5589767198560217e-05,
+      "cage_max_dist": 0.04092050716280937
+    },
+    {
+      "name": "RightLowerArm_Geo",
+      "triangle_count": 279,
+      "vertex_count": 308,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.817444920539856,
+        -1.3267319202423096,
+        2.1071269512176514
+      ],
+      "bbox_max": [
+        1.7166578769683838,
+        0.7612714767456055,
+        3.046917200088501
+      ],
+      "origin_offset": 1.1444091796875e-05
+    },
+    {
+      "name": "RightLowerArm_OuterCage",
+      "triangle_count": 279,
+      "vertex_count": 308,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.817444920539856,
+        -1.3267319202423096,
+        2.1071269512176514
+      ],
+      "bbox_max": [
+        1.7166578769683838,
+        0.7612714767456055,
+        3.046917200088501
+      ],
+      "origin_offset": 1.1444091796875e-05,
+      "cage_max_dist": 0.017607878893613815
+    },
+    {
+      "name": "RightLowerLeg_Geo",
+      "triangle_count": 438,
+      "vertex_count": 304,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.5680423378944397,
+        -0.48217788338661194,
+        0.9630199074745178
+      ],
+      "bbox_max": [
+        1.2128350734710693,
+        0.8276475667953491,
+        1.446649432182312
+      ],
+      "origin_offset": 2.9051868842559466e-05
+    },
+    {
+      "name": "RightLowerLeg_OuterCage",
+      "triangle_count": 438,
+      "vertex_count": 304,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.5680423378944397,
+        -0.48217788338661194,
+        0.9630199074745178
+      ],
+      "bbox_max": [
+        1.2128350734710693,
+        0.8276475667953491,
+        1.446649432182312
+      ],
+      "origin_offset": 2.9051868842559466e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "RightUpperArm_Geo",
+      "triangle_count": 649,
+      "vertex_count": 751,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.692019522190094,
+        -1.3303134441375732,
+        2.944904327392578
+      ],
+      "bbox_max": [
+        1.7236804962158203,
+        0.36567023396492004,
+        4.231212139129639
+      ],
+      "origin_offset": 1.7086480014008443e-05
+    },
+    {
+      "name": "RightUpperArm_OuterCage",
+      "triangle_count": 649,
+      "vertex_count": 751,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        0.692019522190094,
+        -1.3303134441375732,
+        2.944904327392578
+      ],
+      "bbox_max": [
+        1.7236804962158203,
+        0.36567023396492004,
+        4.231212139129639
+      ],
+      "origin_offset": 1.7086480014008443e-05,
+      "cage_max_dist": 0.03150826692581177
+    },
+    {
+      "name": "RightUpperLeg_Geo",
+      "triangle_count": 605,
+      "vertex_count": 399,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -0.009420335292816162,
+        -1.139133334159851,
+        1.3263978958129883
+      ],
+      "bbox_max": [
+        1.174910306930542,
+        -0.32394057512283325,
+        2.4652700424194336
+      ],
+      "origin_offset": 2.0207996464173404e-05
+    },
+    {
+      "name": "RightUpperLeg_OuterCage",
+      "triangle_count": 605,
+      "vertex_count": 399,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -0.009420335292816162,
+        -1.139133334159851,
+        1.3263978958129883
+      ],
+      "bbox_max": [
+        1.174910306930542,
+        -0.32394057512283325,
+        2.4652700424194336
+      ],
+      "origin_offset": 2.0207996464173404e-05,
+      "cage_max_dist": 0.0
+    },
+    {
+      "name": "UpperTorso_Geo",
+      "triangle_count": 543,
+      "vertex_count": 733,
+      "materials": [
+        "Material_0"
+      ],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -0.7684481739997864,
+        -1.1207294464111328,
+        2.9309637546539307
+      ],
+      "bbox_max": [
+        0.7644075155258179,
+        1.0106945037841797,
+        4.076823711395264
+      ],
+      "origin_offset": 3.0814160197073956e-05
+    },
+    {
+      "name": "UpperTorso_OuterCage",
+      "triangle_count": 543,
+      "vertex_count": 733,
+      "materials": [],
+      "parent": "R15_Armature",
+      "bbox_min": [
+        -0.7684481739997864,
+        -1.1207294464111328,
+        2.9309637546539307
+      ],
+      "bbox_max": [
+        0.7644075155258179,
+        1.0106945037841797,
+        4.076823711395264
+      ],
+      "origin_offset": 3.0814160197073956e-05,
+      "cage_max_dist": 0.08443848788738251
+    }
+  ],
+  "armature": {
+    "name": "R15_Armature",
+    "bone_names": [
+      "HumanoidRootPart",
+      "LowerTorso",
+      "UpperTorso",
+      "Head",
+      "LeftUpperArm",
+      "LeftLowerArm",
+      "LeftHand",
+      "RightUpperArm",
+      "RightLowerArm",
+      "RightHand",
+      "LeftUpperLeg",
+      "LeftLowerLeg",
+      "LeftFoot",
+      "RightUpperLeg",
+      "RightLowerLeg",
+      "RightFoot"
+    ]
+  },
+  "attachments": [
+    {
+      "name": "BodyBack_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        0.0,
+        0.5000004172325134,
+        3.5
+      ]
+    },
+    {
+      "name": "BodyFront_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        0.0,
+        -0.4999995827674866,
+        3.5
+      ]
+    },
+    {
+      "name": "FaceCenter_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        -0.4621787667274475,
+        4.499999523162842
+      ]
+    },
+    {
+      "name": "FaceFront_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        -0.941731333732605,
+        4.499999523162842
+      ]
+    },
+    {
+      "name": "Hair_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        -0.4621787667274475,
+        4.999999523162842
+      ]
+    },
+    {
+      "name": "Hat_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        -0.4621787667274475,
+        4.999999523162842
+      ]
+    },
+    {
+      "name": "HatBack_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        0.5000004172325134,
+        4.999999523162842
+      ]
+    },
+    {
+      "name": "LeftAnkleRig_Att",
+      "parent_bone": "LeftFoot",
+      "position": [
+        -0.7276093363761902,
+        5.364418029785156e-07,
+        0.6388722658157349
+      ]
+    },
+    {
+      "name": "LeftCollar_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        0.5,
+        4.073015986705286e-07,
+        4.0
+      ]
+    },
+    {
+      "name": "LeftElbowRig_Att",
+      "parent_bone": "LeftLowerArm",
+      "position": [
+        -1.215148687362671,
+        4.859822411162895e-07,
+        3.0
+      ]
+    },
+    {
+      "name": "LeftFoot_Att",
+      "parent_bone": "LeftFoot",
+      "position": [
+        -0.727609395980835,
+        5.960464477539062e-07,
+        0.3999999463558197
+      ]
+    },
+    {
+      "name": "LeftGrip_Att",
+      "parent_bone": "LeftHand",
+      "position": [
+        -1.45521879196167,
+        5.559204510063864e-07,
+        2.200000047683716
+      ]
+    },
+    {
+      "name": "LeftHipRig_Att",
+      "parent_bone": "LeftUpperLeg",
+      "position": [
+        0.16819679737091064,
+        -0.18126896023750305,
+        1.989894986152649
+      ]
+    },
+    {
+      "name": "LeftKneeRig_Att",
+      "parent_bone": "LeftLowerLeg",
+      "position": [
+        -0.727609395980835,
+        -0.18126897513866425,
+        1.399999976158142
+      ]
+    },
+    {
+      "name": "LeftShoulder_Att",
+      "parent_bone": "LeftUpperArm",
+      "position": [
+        -1.215148687362671,
+        4.788225282936764e-07,
+        3.2564735412597656
+      ]
+    },
+    {
+      "name": "LeftShoulderRig_Att",
+      "parent_bone": "LeftUpperArm",
+      "position": [
+        -0.20464253425598145,
+        5.283008022161084e-07,
+        3.4253385066986084
+      ]
+    },
+    {
+      "name": "LeftWristRig_Att",
+      "parent_bone": "LeftHand",
+      "position": [
+        -1.45521879196167,
+        5.300016709952615e-07,
+        2.4964759349823
+      ]
+    },
+    {
+      "name": "Mouth_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        -0.4999995827674866,
+        4.299999713897705
+      ]
+    },
+    {
+      "name": "Neck_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        0.0,
+        4.073015986705286e-07,
+        4.0
+      ]
+    },
+    {
+      "name": "NeckRig_Att",
+      "parent_bone": "Head",
+      "position": [
+        0.0,
+        -0.4621787667274475,
+        3.999999523162842
+      ]
+    },
+    {
+      "name": "RightAnkleRig_Att",
+      "parent_bone": "RightFoot",
+      "position": [
+        0.36025261878967285,
+        4.76837158203125e-07,
+        0.8305262923240662
+      ]
+    },
+    {
+      "name": "RightCollar_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        -0.5,
+        4.073015986705286e-07,
+        4.0
+      ]
+    },
+    {
+      "name": "RightElbowRig_Att",
+      "parent_bone": "RightLowerArm",
+      "position": [
+        1.45521879196167,
+        4.859822411162895e-07,
+        3.0
+      ]
+    },
+    {
+      "name": "RightFoot_Att",
+      "parent_bone": "RightFoot",
+      "position": [
+        0.31645667552948,
+        5.960464477539062e-07,
+        0.4000000059604645
+      ]
+    },
+    {
+      "name": "RightGrip_Att",
+      "parent_bone": "RightHand",
+      "position": [
+        1.45521879196167,
+        5.559204510063864e-07,
+        2.200000047683716
+      ]
+    },
+    {
+      "name": "RightHipRig_Att",
+      "parent_bone": "RightUpperLeg",
+      "position": [
+        -0.16549843549728394,
+        -0.11393880099058151,
+        1.9860979318618774
+      ]
+    },
+    {
+      "name": "RightKneeRig_Att",
+      "parent_bone": "RightLowerLeg",
+      "position": [
+        0.727609395980835,
+        -0.11393869668245316,
+        1.399999976158142
+      ]
+    },
+    {
+      "name": "RightShoulder_Att",
+      "parent_bone": "RightUpperArm",
+      "position": [
+        1.45521879196167,
+        4.073016555139475e-07,
+        3.9000000953674316
+      ]
+    },
+    {
+      "name": "RightShoulderRig_Att",
+      "parent_bone": "RightUpperArm",
+      "position": [
+        0.1520754098892212,
+        3.244568631544098e-07,
+        3.9000000953674316
+      ]
+    },
+    {
+      "name": "RightWristRig_Att",
+      "parent_bone": "RightHand",
+      "position": [
+        1.45521879196167,
+        5.295942173688672e-07,
+        2.501136541366577
+      ]
+    },
+    {
+      "name": "Root_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        0.0,
+        4.0730174077907577e-07,
+        0.0
+      ]
+    },
+    {
+      "name": "WaistBack_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        0.0,
+        0.4000004231929779,
+        2.8000001907348633
+      ]
+    },
+    {
+      "name": "WaistCenter_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        0.0,
+        4.073016839356569e-07,
+        2.8000001907348633
+      ]
+    },
+    {
+      "name": "WaistFront_Att",
+      "parent_bone": "LowerTorso",
+      "position": [
+        0.0,
+        -0.39999958872795105,
+        2.8000001907348633
+      ]
+    },
+    {
+      "name": "WaistRig_Att",
+      "parent_bone": "UpperTorso",
+      "position": [
+        0.0,
+        4.0730162709223805e-07,
+        3.0
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Material_0",
+      "base_color_texture": "C:\\Users\\jaron\\Documents\\GitHub\\robloxCharacters\\runs\\loop\\cherry-flip\\rigged.fbm\\Image_0",
+      "normal_texture": null,
+      "metallic_roughness_texture": null
+    }
+  ],
+  "group_view_fill": {
+    "Head": {
+      "x": 0.67254638671875,
+      "y": 0.38629150390625,
+      "z": 0.50860595703125
+    },
+    "Torso": {
+      "x": 0.237548828125,
+      "y": 0.54779052734375,
+      "z": 0.70550537109375
+    },
+    "LeftArm": {
+      "x": 0.70855712890625,
+      "y": 0.31585693359375,
+      "z": 0.53387451171875
+    },
+    "RightArm": {
+      "x": 0.44232177734375,
+      "y": 0.4298095703125,
+      "z": 0.54998779296875
+    },
+    "LeftLeg": {
+      "x": 0.25299072265625,
+      "y": 0.3931884765625,
+      "z": 0.44805908203125
+    },
+    "RightLeg": {
+      "x": 0.2744140625,
+      "y": 0.26287841796875,
+      "z": 0.26165771484375
+    }
+  },
+  "notes": []
+}
