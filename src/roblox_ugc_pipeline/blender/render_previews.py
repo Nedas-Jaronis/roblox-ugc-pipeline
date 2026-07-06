@@ -60,6 +60,9 @@ def main() -> int:
     dist = size * 2.5
 
     bpy.ops.object.camera_add(location=(cx, cy - dist, cz))
+    # Tiny stud-scaled exports (0.01 baked global scale) sit inside the
+    # default 0.1 near-clip; scale clipping to the subject.
+    bpy.context.object.data.clip_start = max(dist * 0.001, 1e-5)
     cam = bpy.context.object
     cam.data.type = "PERSP"
     cam.data.lens = 50

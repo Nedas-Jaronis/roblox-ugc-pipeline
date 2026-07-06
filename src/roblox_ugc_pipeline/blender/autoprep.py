@@ -397,10 +397,18 @@ def run_inplace(
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
+        # Rotate via the world matrix, NOT rotation_euler: glTF imports leave
+        # objects in QUATERNION rotation mode, where rotation_euler writes are
+        # silently ignored (cost us three phantom "rotated" exports).
+        from mathutils import Matrix
+        rot = Matrix.Identity(4)
         if yaw_deg:
-            obj.rotation_euler.rotate_axis("Z", math.radians(yaw_deg))
+            rot = Matrix.Rotation(math.radians(yaw_deg), 4, "Z") @ rot
         if pitch_deg:
-            obj.rotation_euler.rotate_axis("X", math.radians(pitch_deg))
+            # Negated so positive --pitch tips the FRONT (-Y) upward.
+            rot = Matrix.Rotation(math.radians(-pitch_deg), 4, "X") @ rot
+        obj.matrix_world = rot @ obj.matrix_world
+        bpy.context.view_layer.update()
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
         log["steps"]["yaw"] = f"yaw {yaw_deg} deg about Z, pitch {pitch_deg} deg about X"
 
