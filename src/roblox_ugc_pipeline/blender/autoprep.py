@@ -427,6 +427,16 @@ def run_inplace(
     before, after = decimate_to(obj, target_tris)
     log["steps"]["decimate"] = {"before": before, "after": after, "target": target_tris}
 
+    # Smooth shading: welded+decimated meshes come out flat-shaded, which
+    # renders every triangle as a visible facet in Roblox. Interpolated
+    # normals (exported via mesh_smooth_type=FACE) make the low-poly surface
+    # read as smooth — this is what separates "AI-generated look" from
+    # "product look".
+    for poly in obj.data.polygons:
+        poly.use_smooth = True
+    obj.data.update()
+    log["steps"]["shade"] = "smooth shading on all polygons"
+
     required = cat.attachment if isinstance(cat.attachment, tuple) else (cat.attachment,)
     stamped = stamp_attachments(obj, required)
     log["steps"]["attachments"] = {"required": list(required), "stamped": stamped}
